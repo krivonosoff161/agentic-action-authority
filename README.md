@@ -12,8 +12,8 @@ adapter. The approval core can be installed without Harness; custom effect adapt
 are trusted application code and require their own effect/recovery tests.
 
 Version **0.1.0** is an experimental API. Check [Releases](https://github.com/krivonosoff161/agentic-action-authority/releases)
-for publication status; these commands build this checkout without assuming an
-index package has been published.
+and [PyPI](https://pypi.org/project/agentic-action-authority/0.1.0/) for publication
+status. Installing does not enroll an operator or authorize an action.
 
 ## What it changes
 
@@ -25,13 +25,26 @@ cannot silently become a new authorized action.
 
 This is **not a content filter**: approval does not prove that text is true or
 free of prompt injection. It is not a sandbox for arbitrary Python or a compromised
-host, and does not promise universal exactly-once effects. See [security boundaries](SECURITY.md).
+host, and does not promise universal exactly-once effects. See [security boundaries](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.0/SECURITY.md).
 
 ## Start with one document
 
 Requirements: Python 3.11; lock targets are Windows x64 and Linux x86_64 with
 glibc 2.28+. Use a local filesystem with working SQLite locks, not an unverified
-network/FUSE filesystem. Build in a new virtual environment from this checkout:
+network/FUSE filesystem. For a published wheel, use a new virtual environment:
+
+```text
+python -m venv .venv
+# Use .venv/Scripts/python.exe on Windows, .venv/bin/python on Linux.
+<python> -m pip install "agentic-action-authority[harness]==0.1.0"
+<python> -m pip check
+```
+
+Omit `[harness]` for the standalone approval core. The file adapter deliberately
+pins Harness **1.14.1**, the version verified for this distribution; installing
+another Harness version is not automatically a supported pairing.
+
+For an auditable checkout build and hash-locked installation:
 
 ```text
 python -m venv .venv
@@ -47,30 +60,33 @@ For the Harness-free core, use `requirements/core-windows.txt` or
 `requirements/core-linux.txt` instead. The file CLI needs the optional Harness
 dependency; the core alone does not supply a file writer.
 
-Follow the [one-document guide](docs/one-document.md): prepare → review/sign →
+Follow the [one-document guide](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.0/docs/one-document.md): prepare → review/sign →
 apply decision → write → read back. Operator signing is interactive. Private keys
 and passphrases never belong in chat, an agent prompt or command-line arguments.
 
 ## Embed in your agent application
 
-The routing example [content_only_dispatch.py](examples/content_only_dispatch.py)
+The routing example [content_only_dispatch.py](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.0/examples/content_only_dispatch.py)
 accepts only `submit_approved_document({"content": "..."})`, rejects paths and
 approval fields, and reports uncertainty without retrying. The host creates and
 retains an `ActionGate`, enrolls the operator public key and applies signed
 decisions separately. Give the model only the content-only callback, not the
 gate, signer or unrestricted filesystem/Python access.
 
-See [architecture and adapter contract](docs/architecture.md) for `ActionCore`,
+See [architecture and adapter contract](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.0/docs/architecture.md) for `ActionCore`,
 `ActionGate`, protocol domains, state transitions and adapter obligations.
 
 ## Verification and provenance
 
-The [verification guide](docs/verification.md) separates base-only installation,
+The [verification guide](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.0/docs/verification.md) separates base-only installation,
 optional-adapter checks, source/wheel byte identity and platform results. Tests
 use disposable signatures and files; they do not constitute human acceptance.
-The [source provenance](docs/provenance.md) identifies the original Harness
+The [source provenance](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.0/docs/provenance.md) identifies the original Harness
 candidate. Historical results are not automatically results for this distribution.
+The [release procedure](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.0/docs/releasing.md) binds one tag-built wheel to staging,
+publication and downloaded-index checks; a read-only check is not an upload.
 
 One project owns the approval core here. Harness owns its file writer and broader
 security laboratory. There is no second copied writer or circular dependency.
-Apache-2.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Apache-2.0; see [LICENSE](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.0/LICENSE)
+and [NOTICE](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.0/NOTICE).

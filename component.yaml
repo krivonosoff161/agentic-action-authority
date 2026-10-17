@@ -93,6 +93,7 @@
         "windows"
       ],
       "tested": [
+        "linux",
         "windows"
       ]
     }

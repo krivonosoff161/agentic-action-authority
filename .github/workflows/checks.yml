@@ -5,6 +5,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+    tags: [v0.1.0]
   workflow_dispatch:
 
 permissions:
@@ -30,6 +31,8 @@ jobs:
         run: |
           if ((git rev-parse HEAD).Trim() -ne $env:EXPECTED_SHA) { throw 'Checkout mismatch' }
           python tools/check_public_tree.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/release_gate.py self-test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m pip --isolated install --index-url https://pypi.org/simple --require-hashes -r requirements/build.txt -r requirements/lint.txt
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
