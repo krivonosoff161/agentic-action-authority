@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-action-authority"
+version = "0.1.0"
+description = "Exact-action operator approval with durable execution coordination and optional effect adapters"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+dependencies = ["cryptography==50.0.2"]
+
+[project.optional-dependencies]
+harness = ["agentic-security-harness==1.14.1"]
+
+[project.scripts]
+action-authority-operator = "ash_action_authority.operator:main"
+action-authority-host = "ash_action_authority.host:main"
+
+[project.urls]
+Homepage = "https://github.com/krivonosoff161/agentic-action-authority"
+Issues = "https://github.com/krivonosoff161/agentic-action-authority/issues"
+Source = "https://github.com/krivonosoff161/agentic-action-authority"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
