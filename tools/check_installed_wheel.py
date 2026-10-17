@@ -45,7 +45,7 @@ def check(wheel: Path, source: Path, *, with_harness: bool = False) -> dict:
         harness_version = None
     if with_harness:
         _installed("agentic_security_harness")
-        _require(harness_version == "1.14.1", "wrong_installed_harness_version")
+        _require(harness_version == "1.14.2", "wrong_installed_harness_version")
     else:
         _require(harness_version is None, "core_lane_must_not_have_harness_installed")
     source_files = sorted((source / "src" / PACKAGE).glob("*.py"))

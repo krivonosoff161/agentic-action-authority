@@ -41,8 +41,8 @@ python -m venv .venv
 ```
 
 Omit `[harness]` for the standalone approval core. The file adapter deliberately
-pins Harness **1.14.1**, the version verified for this distribution; installing
-another Harness version is not automatically a supported pairing.
+pins Harness **1.14.2**. Other Harness versions are not automatically a supported
+pairing; compatibility evidence belongs to the exact installed checks below.
 
 For an auditable checkout build and hash-locked installation:
 

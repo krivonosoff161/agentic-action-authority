@@ -36,7 +36,7 @@
   "consumes": [
     "operator-enrolled public key and detached signed decisions",
     "host-owned exact payload and declared dependency digests",
-    "optional agentic-security-harness==1.14.1 file writer"
+    "optional agentic-security-harness==1.14.2 file writer"
   ],
   "contracts": [
     {
@@ -53,7 +53,7 @@
     },
     {
       "id": "harness-workspace-operation",
-      "version": "1.14.1",
+      "version": "1.14.2",
       "direction": "consumes",
       "required": false
     }
@@ -85,7 +85,7 @@
     }
   ],
   "compatibility": {
-    "harness_api": "optional workspace operation 1.14.1",
+    "harness_api": "optional workspace operation 1.14.2",
     "python": ">=3.11",
     "platforms": {
       "supported": [

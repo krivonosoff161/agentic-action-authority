@@ -1,4 +1,4 @@
-agentic-security-harness==1.14.1 --hash=sha256:09a5f79ce54ff2faaee0ff34b21c406efb04e2b182ac708f19a290ec91d4938c
+agentic-security-harness==1.14.2 --hash=sha256:abf0d8798f1aa5a31ee01efd5fd8fcd8c3950b451a5f5d33c807953e08626d36
 annotated-types==0.8.0 --hash=sha256:f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0
 cffi==2.1.1 --hash=sha256:34e261f78cb6ceaaa36f42f2613f4380d94d9c759a9c73c769ee6e0247364632
 cryptography==50.0.2 --hash=sha256:4061c0079120205fb760c58acab6443e217307dcf05e3702cf970e0689972856
