@@ -1,0 +1,213 @@
+name: Checked index publication
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        type: choice
+        options: [testpypi, pypi]
+        required: true
+      mode:
+        type: choice
+        options: [verify, publish]
+        default: verify
+        required: true
+      build_run:
+        description: Successful exact v0.1.0 tag-triggered checks.yml run
+        required: true
+        type: string
+      stage_run:
+        description: Successful testpypi PUBLISH release.yml run, required for PyPI
+        required: false
+        type: string
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Verify tag, merged ancestry and successful build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REF: ${{ github.ref }}
+          BUILD_RUN: ${{ inputs.build_run }}
+        run: |
+          set -euo pipefail
+          test "$RELEASE_REF" = refs/tags/v0.1.0
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor HEAD origin/main
+          python tools/release_gate.py check-build --sha "$GITHUB_SHA" --build-run "$BUILD_RUN"
+      - name: Require configured owner review and exact release tag
+        if: inputs.mode == 'publish'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TARGET: ${{ inputs.target }}
+        run: python tools/release_gate.py check-policy --sha "$GITHUB_SHA" --target "$RELEASE_TARGET"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run }}
+          name: authority-wheel-${{ github.sha }}
+          path: checked-wheel
+      - name: Download prior staging evidence
+        if: inputs.target == 'pypi'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.stage_run }}
+          name: publication-testpypi
+          path: staging
+      - name: Bind PyPI to successful staging of the same subject
+        if: inputs.target == 'pypi'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN: ${{ inputs.build_run }}
+          STAGE_RUN: ${{ inputs.stage_run }}
+        run: |
+          python tools/release_gate.py check-stage --sha "$GITHUB_SHA" --build-run "$BUILD_RUN" --stage-run "$STAGE_RUN" --wheel-dir checked-wheel --stage-file staging/receipt.json
+
+  publish:
+    needs: preflight
+    if: inputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ inputs.target }}
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run }}
+          name: authority-wheel-${{ github.sha }}
+          path: checked-wheel
+      - name: Copy only the verified wheel for upload
+        run: |
+          python -c 'import sys, pathlib, shutil; sys.path.insert(0, "tools"); from release_gate import wheel_identity; wheel, _, _ = wheel_identity(pathlib.Path("checked-wheel")); pathlib.Path("upload").mkdir(); shutil.copyfile(wheel, pathlib.Path("upload") / wheel.name)'
+      - name: Upload to TestPyPI using OIDC
+        if: inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: upload/
+          skip-existing: false
+      - name: Upload to PyPI using OIDC
+        if: inputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: upload/
+          skip-existing: false
+
+  verify:
+    name: Index ${{ matrix.suite }} / ${{ matrix.os }}
+    needs: [preflight, publish]
+    if: always() && needs.preflight.result == 'success' && (needs.publish.result == 'success' || inputs.mode == 'verify')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        suite: [core, harness]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run }}
+          name: authority-wheel-${{ github.sha }}
+          path: ${{ runner.temp }}/checked-wheel
+      - name: Install downloaded index bytes and verify
+        shell: pwsh
+        working-directory: ${{ runner.temp }}
+        env:
+          AUTHORITY_CHECKOUT: ${{ github.workspace }}
+          AUTHORITY_SUITE: ${{ matrix.suite }}
+          RELEASE_TARGET: ${{ inputs.target }}
+        run: |
+          $wheelDir = Join-Path $env:RUNNER_TEMP 'checked-wheel'
+          $indexDir = Join-Path $env:RUNNER_TEMP 'index-wheel'
+          python (Join-Path $env:AUTHORITY_CHECKOUT 'tools/release_gate.py') index --sha $env:GITHUB_SHA --target $env:RELEASE_TARGET --wheel-dir $wheelDir --out $indexDir
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $wheel = Join-Path $indexDir 'agentic_action_authority-0.1.0-py3-none-any.whl'
+          $venv = Join-Path $env:RUNNER_TEMP 'index-venv'
+          python -m venv $venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $exe = if ($IsWindows) { Join-Path $venv 'Scripts/python.exe' } else { Join-Path $venv 'bin/python' }
+          $osName = if ($IsWindows) { 'windows' } else { 'linux' }
+          $prefix = if ($env:AUTHORITY_SUITE -eq 'core') { 'core-' } else { '' }
+          & $exe -m pip --isolated install --index-url https://pypi.org/simple --only-binary=:all: --no-compile --require-hashes -r (Join-Path $env:AUTHORITY_CHECKOUT "requirements/$prefix$osName.txt")
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $exe -m pip --isolated install --no-index --no-deps --no-compile $wheel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $exe -m pip check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $results = Join-Path $env:RUNNER_TEMP 'index-results'
+          New-Item -ItemType Directory -Path $results -ErrorAction Stop | Out-Null
+          $extra = @()
+          if ($env:AUTHORITY_SUITE -eq 'harness') { $extra += '--with-harness' }
+          & $exe (Join-Path $env:AUTHORITY_CHECKOUT 'tools/check_installed_wheel.py') --wheel $wheel --source $env:AUTHORITY_CHECKOUT --out (Join-Path $results 'wheel.json') @extra
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $exe (Join-Path $env:AUTHORITY_CHECKOUT 'tools/run_checks.py') --source $env:AUTHORITY_CHECKOUT --suite $env:AUTHORITY_SUITE --out (Join-Path $results 'unittest')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Retain index check evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: index-${{ inputs.target }}-${{ matrix.os }}-${{ matrix.suite }}
+          path: ${{ runner.temp }}/index-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  receipt:
+    needs: [preflight, publish, verify]
+    if: always() && needs.preflight.result == 'success' && needs.verify.result == 'success' && (needs.publish.result == 'success' || inputs.mode == 'verify')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run }}
+          name: authority-wheel-${{ github.sha }}
+          path: checked-wheel
+      - name: Record fully verified subject
+        env:
+          RELEASE_TARGET: ${{ inputs.target }}
+          BUILD_RUN: ${{ inputs.build_run }}
+          PUBLICATION_MODE: ${{ inputs.mode }}
+        run: python tools/release_gate.py receipt --sha "$GITHUB_SHA" --build-run "$BUILD_RUN" --target "$RELEASE_TARGET" --publication-mode "$PUBLICATION_MODE" --wheel-dir checked-wheel --out receipt.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ inputs.mode == 'publish' && 'publication' || 'index-verification' }}-${{ inputs.target }}
+          path: receipt.json
+          if-no-files-found: error
+          retention-days: 90
