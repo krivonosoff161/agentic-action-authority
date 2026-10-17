@@ -102,7 +102,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $results = Join-Path $env:RUNNER_TEMP 'authority-results'
           New-Item -ItemType Directory -Path $results -ErrorAction Stop | Out-Null
-          $extra = if ($env:AUTHORITY_SUITE -eq 'harness') { @('--with-harness') } else { @() }
+          $extra = @()
+          if ($env:AUTHORITY_SUITE -eq 'harness') { $extra += '--with-harness' }
           & $exe (Join-Path $env:AUTHORITY_CHECKOUT 'tools/check_installed_wheel.py') --wheel $wheels[0].FullName --source $env:AUTHORITY_CHECKOUT --out (Join-Path $results 'wheel.json') @extra
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & $exe (Join-Path $env:AUTHORITY_CHECKOUT 'tools/run_checks.py') --source $env:AUTHORITY_CHECKOUT --suite $env:AUTHORITY_SUITE --out (Join-Path $results 'unittest')
