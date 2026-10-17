@@ -1,0 +1,117 @@
+name: Exact installed acceptance
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and lint exact revision
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Check revision, lint and build
+        shell: pwsh
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if ((git rev-parse HEAD).Trim() -ne $env:EXPECTED_SHA) { throw 'Checkout mismatch' }
+          python tools/check_public_tree.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pip --isolated install --index-url https://pypi.org/simple --require-hashes -r requirements/build.txt -r requirements/lint.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m ruff check --no-cache src tests tools examples
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m build --no-isolation --wheel --outdir dist
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $wheels = @(Get-ChildItem -LiteralPath dist -File -Filter '*.whl')
+          if ($wheels.Count -ne 1) { throw 'One wheel required' }
+          (Get-FileHash -LiteralPath $wheels[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant() |
+            Set-Content -LiteralPath dist/wheel.sha256 -NoNewline -Encoding ascii
+      - name: Retain build, not acceptance
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: authority-wheel-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/
+          if-no-files-found: warn
+          retention-days: 14
+
+  installed:
+    name: Installed ${{ matrix.suite }} / ${{ matrix.os }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        suite: [core, harness]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: authority-wheel-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/authority-wheel
+      - name: Install and verify the exact wheel
+        shell: pwsh
+        working-directory: ${{ runner.temp }}
+        env:
+          AUTHORITY_CHECKOUT: ${{ github.workspace }}
+          AUTHORITY_SUITE: ${{ matrix.suite }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if ((git -C $env:AUTHORITY_CHECKOUT rev-parse HEAD).Trim() -ne $env:EXPECTED_SHA) { throw 'Checkout mismatch' }
+          $wheelDir = Join-Path $env:RUNNER_TEMP 'authority-wheel'
+          $wheels = @(Get-ChildItem -LiteralPath $wheelDir -File -Filter '*.whl')
+          if ($wheels.Count -ne 1) { throw 'One downloaded wheel required' }
+          $expected = (Get-Content -LiteralPath (Join-Path $wheelDir 'wheel.sha256') -Raw).Trim()
+          $actual = (Get-FileHash -LiteralPath $wheels[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw 'Wheel digest mismatch' }
+          $venv = Join-Path $env:RUNNER_TEMP 'authority-venv'
+          python -m venv $venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $exe = if ($IsWindows) { Join-Path $venv 'Scripts/python.exe' } else { Join-Path $venv 'bin/python' }
+          $platformLock = if ($IsWindows) { 'windows' } else { 'linux' }
+          $prefix = if ($env:AUTHORITY_SUITE -eq 'core') { 'core-' } else { '' }
+          $lock = Join-Path $env:AUTHORITY_CHECKOUT "requirements/$prefix$platformLock.txt"
+          & $exe -m pip --isolated install --index-url https://pypi.org/simple --only-binary=:all: --no-compile --require-hashes -r $lock
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $exe -m pip --isolated install --no-index --no-deps --no-compile $wheels[0].FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $exe -m pip check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $results = Join-Path $env:RUNNER_TEMP 'authority-results'
+          New-Item -ItemType Directory -Path $results -ErrorAction Stop | Out-Null
+          $extra = if ($env:AUTHORITY_SUITE -eq 'harness') { @('--with-harness') } else { @() }
+          & $exe (Join-Path $env:AUTHORITY_CHECKOUT 'tools/check_installed_wheel.py') --wheel $wheels[0].FullName --source $env:AUTHORITY_CHECKOUT --out (Join-Path $results 'wheel.json') @extra
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $exe (Join-Path $env:AUTHORITY_CHECKOUT 'tools/run_checks.py') --source $env:AUTHORITY_CHECKOUT --suite $env:AUTHORITY_SUITE --out (Join-Path $results 'unittest')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Retain synthetic results, including failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: authority-${{ matrix.os }}-${{ matrix.suite }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/authority-results/
+          if-no-files-found: warn
+          retention-days: 14
