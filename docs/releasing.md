@@ -6,13 +6,13 @@ rebuild a different wheel for another index.
 
 Before enabling publication, the owner must configure the `testpypi` and `pypi`
 GitHub environments: required reviewer `krivonosoff161`, custom deployment policy
-allowing ONLY tag `v0.1.0`. Configure each index Trusted Publisher for this
+allowing only tags `v0.1.0` (retained history) and `v0.1.1` (current). Configure each index Trusted Publisher for this
 repository's `release.yml` and its matching environment. No API token is stored
 in this repository. Naming an environment in YAML does not create these controls;
 the release preflight checks live reviewer and exact-tag policy metadata.
 
 1. Merge the checked PR; wait for post-merge checks and Gitleaks.
-2. Tag that merged SHA `v0.1.0`. Wait for tag-triggered `checks.yml` AND Gitleaks.
+2. Tag that merged SHA `v0.1.1`. Wait for tag-triggered `checks.yml` AND Gitleaks.
    The tag build makes one wheel and all four Linux/Windows core/adapter lanes
    install that same artifact. Keep the build run ID and SHA-256.
 3. Dispatch `release.yml` ON THE TAG with `target=testpypi`, `mode=publish`, and
@@ -31,6 +31,11 @@ but a subsequent platform check failed transiently, investigate first, then use
 GitHub **Re-run failed jobs** for that same publish run. Do not re-run successful
 upload jobs. An ambiguous upload is an owner incident gate, not automatic retry.
 Read-only verification does not erase or relabel a failed publication run.
+
+The 0.1.0 TestPyPI upload is retained. Its index check failed because the verifier
+decoded UTF-8 description bytes as ASCII replacements, not because the published
+wheel changed. The corrected 0.1.1 verifier preserves Unicode and refuses invalid
+UTF-8. Never overwrite the old tag or upload a corrected wheel under 0.1.0.
 
 The current release uploads a wheel only; the corresponding source is the immutable
 Git tag. Fixed tests use generated fixture keys and documents. Release automation
