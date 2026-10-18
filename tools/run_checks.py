@@ -97,7 +97,7 @@ def main() -> int:
         harness_version = None
     if args.suite == "harness":
         imported["harness"] = _installed_module("agentic_security_harness")
-        if harness_version != "1.14.1":
+        if harness_version != "1.14.2":
             raise RuntimeError("wrong_installed_harness_version")
     elif harness_version is not None:
         raise RuntimeError("core_lane_must_not_have_harness_installed")

@@ -13,7 +13,7 @@ license-files = ["LICENSE", "NOTICE"]
 dependencies = ["cryptography==50.0.2"]
 
 [project.optional-dependencies]
-harness = ["agentic-security-harness==1.14.1"]
+harness = ["agentic-security-harness==1.14.2"]
 
 [project.scripts]
 action-authority-operator = "ash_action_authority.operator:main"
