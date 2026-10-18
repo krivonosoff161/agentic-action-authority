@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import unittest
 from contextlib import redirect_stdout
@@ -43,6 +44,8 @@ class PublicDocumentHostTests(unittest.TestCase):
             self.public,
             self.source,
             self.proposal,
+            expected_key_fingerprint=hashlib.sha256(bytes.fromhex(self.public.read_text("ascii"))).hexdigest(),
+            host_repository="fixture/document-host",
             host_revision="a" * 40,
             valid_seconds=3600,
             allow_local_source_use=True,
@@ -99,7 +102,9 @@ class PublicDocumentHostTests(unittest.TestCase):
 
     def test_source_use_requires_explicit_host_decision_before_setup(self) -> None:
         with self.assertRaisesRegex(AuthorityError, "host_must_authorize_local_public_source_use"):
-            setup(self.home, self.public, self.source, self.proposal, host_revision="a" * 40)
+            setup(self.home, self.public, self.source, self.proposal,
+                  expected_key_fingerprint="0" * 64, host_repository="fixture/document-host",
+                  host_revision="a" * 40)
         self.assertFalse(self.home.exists())
 
     def test_changed_retained_document_refuses_approval(self) -> None:
