@@ -8,7 +8,7 @@
   "summary": "Separately owned exact-action approval core with an optional Harness create-only file adapter; no automatic extension loading.",
   "package": {
     "name": "agentic-action-authority",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "install": "Build the exact checkout using README.md; consult Releases for index publication.",
     "entry_points": [
       "action-authority-operator",

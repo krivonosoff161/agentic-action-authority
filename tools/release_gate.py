@@ -7,14 +7,15 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 import urllib.request
 import zipfile
-from email.parser import BytesParser
+from email.parser import Parser
 from pathlib import Path
 
 REPOSITORY = "krivonosoff161/agentic-action-authority"
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 TAG = "v" + VERSION
 WHEEL = "agentic_action_authority-" + VERSION + "-py3-none-any.whl"
 LIMIT = 10_000_000
@@ -68,8 +69,9 @@ def validate_environment(environment, policies):
                  if rule.get("type") == "required_reviewers"
                  for reviewer in rule.get("reviewers", [])]
     require(reviewers == [("User", "krivonosoff161")], "release_owner_reviewer_required")
-    require([(item.get("type"), item.get("name"))
-             for item in policies.get("branch_policies", [])] == [("tag", TAG)],
+    require(sorted((item.get("type", ""), item.get("name", ""))
+                   for item in policies.get("branch_policies", []))
+            == [("tag", "v0.1.0"), ("tag", TAG)],
             "release_exact_tag_required")
 
 
@@ -83,7 +85,9 @@ def wheel_identity(folder):
             "wheel_digest")
     with zipfile.ZipFile(wheel) as archive:
         name = f"agentic_action_authority-{VERSION}.dist-info/METADATA"
-        metadata = BytesParser().parsebytes(archive.read(name))
+        # Core Metadata is UTF-8. compat32 BytesParser assumes an unspecified
+        # payload charset is ASCII and silently replaces non-ASCII README bytes.
+        metadata = Parser().parsestr(archive.read(name).decode("utf-8"))
     require(metadata["Name"] == "agentic-action-authority" and metadata["Version"] == VERSION,
             "wheel_metadata")
     return wheel, digest, metadata.get_payload()
@@ -99,6 +103,11 @@ def validate_stage(receipt, *, sha, build_run, digest):
     }, "staging_subject_mismatch")
 
 
+def validate_description(actual, expected):
+    require(actual.replace("\r\n", "\n").rstrip()
+            == expected.replace("\r\n", "\n").rstrip(), "index_description")
+
+
 def download_index(folder, target, digest, description):
     host = "test.pypi.org" if target == "testpypi" else "pypi.org"
     with urllib.request.urlopen(
@@ -108,8 +117,7 @@ def download_index(folder, target, digest, description):
     require(len(raw) <= LIMIT, "index_metadata_oversize")
     metadata = json.loads(raw)
     require(metadata["info"]["version"] == VERSION, "index_version")
-    require(metadata["info"]["description"].replace("\r\n", "\n").rstrip()
-            == description.replace("\r\n", "\n").rstrip(), "index_description")
+    validate_description(metadata["info"]["description"], description)
     subjects = [item for item in metadata["urls"] if item["filename"] == WHEEL]
     require(len(subjects) == 1 and not subjects[0]["yanked"], "index_subject")
     item = subjects[0]
@@ -125,6 +133,36 @@ def download_index(folder, target, digest, description):
 
 
 class GateTests(unittest.TestCase):
+    def fixture_wheel(self, folder, description):
+        raw = (f"Metadata-Version: 2.4\nName: agentic-action-authority\n"
+               f"Version: {VERSION}\nDescription-Content-Type: text/markdown\n\n").encode()
+        path = folder / WHEEL
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr(f"agentic_action_authority-{VERSION}.dist-info/METADATA",
+                             raw + description)
+        (folder / "wheel.sha256").write_text(
+            hashlib.sha256(path.read_bytes()).hexdigest(), encoding="ascii")
+
+    def test_utf8_wheel_description_roundtrip(self):
+        for description in ("ASCII", "prepare → review/sign → write", "Проверка №1 — 确认"):
+            with self.subTest(description=description), tempfile.TemporaryDirectory() as tmp:
+                folder = Path(tmp)
+                self.fixture_wheel(folder, description.encode("utf-8"))
+                self.assertEqual(wheel_identity(folder)[2], description)
+
+    def test_invalid_utf8_metadata_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            self.fixture_wheel(folder, b"invalid\xff")
+            with self.assertRaises(UnicodeDecodeError):
+                wheel_identity(folder)
+
+    def test_description_check_retains_exact_unicode(self):
+        validate_description("prepare → write\r\n", "prepare → write\n")
+        for altered in ("prepare � write", "prepare -> write", "prepare → overwrite"):
+            with self.subTest(altered=altered), self.assertRaisesRegex(ValueError, "index_description"):
+                validate_description(altered, "prepare → write")
+
     def sample(self):
         return {"repository": {"full_name": REPOSITORY},
                 "path": ".github/workflows/checks.yml", "head_sha": "a" * 40,
@@ -170,7 +208,8 @@ class GateTests(unittest.TestCase):
         }, "protection_rules": [{"type": "required_reviewers", "reviewers": [
             {"type": "User", "reviewer": {"login": "krivonosoff161"}},
         ]}]}
-        policies = {"branch_policies": [{"type": "tag", "name": TAG}]}
+        policies = {"branch_policies": [{"type": "tag", "name": "v0.1.0"},
+                                       {"type": "tag", "name": TAG}]}
         validate_environment(environment, policies)
         for altered in ({**environment, "protection_rules": []},
                         {**environment, "deployment_branch_policy": None}):
@@ -196,7 +235,7 @@ def main():
     args = parser.parse_args()
     if args.mode == "self-test":
         result = unittest.TextTestRunner().run(unittest.defaultTestLoader.loadTestsFromTestCase(GateTests))
-        return 0 if result.wasSuccessful() and result.testsRun == 6 else 1
+        return 0 if result.wasSuccessful() and result.testsRun == 9 else 1
     require(args.sha is not None and re.fullmatch(r"[0-9a-f]{40}", args.sha), "invalid_sha")
     if args.mode == "check-build":
         validate_run(github_run(args.build_run), sha=args.sha, workflow="checks.yml", tag_push=True)
