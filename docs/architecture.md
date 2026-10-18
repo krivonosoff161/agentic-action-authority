@@ -16,12 +16,14 @@ without Harness. Importing ActionGate loads the optional file adapter. The opera
 CLI is never an agent tool. The host CLI is the file adapter's reference host,
 not an unrestricted execution server.
 
-The unreleased `codex/product-onboarding` candidate adds public `DocumentHost`
-as an installed facade over this existing host state and writer. Published 0.1.1
-does not contain it. `prepare` validates an independently supplied expected
+Version 0.2.0 adds public `DocumentHost` as an installed facade over this
+existing host state and writer; 0.1.1 did not contain it. `prepare` validates
+an independently supplied expected
 public-key fingerprint before task creation, then binds a host-declared
 `owner/repository` and exact host revision. Structural validation does not
-prove remote repository provenance. `open` reopens retained state without
+prove remote repository provenance. Version 0.2.0 requires these fingerprint
+and host-repository inputs; old task state is not migrated or overwritten.
+See the [upgrade notes](upgrading-0.2.md). `open` reopens retained state without
 recreating it; `review_files`, `request`, and `export_request` let the trusted
 host transfer an exact review. `apply_decision` remains host-only. `bind_tool`
 exposes only `submit_approved_document({"content": ...})`; `status(recover=True)`

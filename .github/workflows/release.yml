@@ -12,7 +12,7 @@ on:
         default: verify
         required: true
       build_run:
-        description: Successful exact v0.1.1 tag-triggered checks.yml run
+        description: Successful exact v0.2.0 tag-triggered checks.yml run
         required: true
         type: string
       stage_run:
@@ -42,7 +42,7 @@ jobs:
           BUILD_RUN: ${{ inputs.build_run }}
         run: |
           set -euo pipefail
-          test "$RELEASE_REF" = refs/tags/v0.1.1
+          test "$RELEASE_REF" = refs/tags/v0.2.0
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git merge-base --is-ancestor HEAD origin/main
           python tools/release_gate.py check-build --sha "$GITHUB_SHA" --build-run "$BUILD_RUN"
@@ -151,7 +151,7 @@ jobs:
           $indexDir = Join-Path $env:RUNNER_TEMP 'index-wheel'
           python (Join-Path $env:AUTHORITY_CHECKOUT 'tools/release_gate.py') index --sha $env:GITHUB_SHA --target $env:RELEASE_TARGET --wheel-dir $wheelDir --out $indexDir
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $wheel = Join-Path $indexDir 'agentic_action_authority-0.1.1-py3-none-any.whl'
+          $wheel = Join-Path $indexDir 'agentic_action_authority-0.2.0-py3-none-any.whl'
           $venv = Join-Path $env:RUNNER_TEMP 'index-venv'
           python -m venv $venv
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

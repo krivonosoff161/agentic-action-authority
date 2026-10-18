@@ -14,7 +14,7 @@ From OUTSIDE the checkout, using absolute paths and new output destinations:
 ```
 
 The runner checks an explicit source/test/example inventory and installed imports.
-Candidate expected counts: core29, Harness93 (includes core). The published
+Version 0.2.0 expected counts: core29, Harness93 (includes core). The published
 0.1.1 inventory remains core28/Harness72; do not relabel historical results.
 No skipped/expected-failure
 test is accepted. Counts are bookkeeping, not a security score.
@@ -31,7 +31,7 @@ All keys, signatures and effects are disposable synthetic fixtures, not operator
 consent. Tests make no model calls; network syscall isolation is not established
 by this suite. Assistant review is not independent human review.
 
-Candidate onboarding cases additionally check independent expected-fingerprint
+Version 0.2.0 onboarding cases additionally check independent expected-fingerprint
 matching before task creation, explicit host repository/revision declarations,
 installed `DocumentHost` public-API composition and content-only routing. Declared
 provenance is not remotely attested. Source tests do not replace installed checks.

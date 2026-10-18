@@ -1,15 +1,14 @@
 # Embed one reviewed document in a trusted host
 
-This is the **unreleased `codex/product-onboarding` candidate**. `DocumentHost`
-and the required `--expected-key-fingerprint` / `--host-repository` setup flags
-are absent from the published 0.1.1 wheel. Use an installed wheel built from
-the exact candidate source as described in the [README](../README.md#candidate-onboarding-api).
-Do not install 0.1.1 from PyPI and expect this example to work. The wheel's
-0.1.1 metadata alone does not establish that it contains candidate code.
+This is the **0.2.0 `DocumentHost` API**. Confirm the exact 0.2.0 package is
+available and install it using the [README](../README.md#start-with-one-document).
+The required `--expected-key-fingerprint` / `--host-repository` setup flags
+and `DocumentHost` are absent from the 0.1.1 wheel. Existing 0.1.1 task state
+is not automatically migrated; see the [upgrade notes](upgrading-0.2.md).
 
 The host owns task state, public source admission, operator enrollment, review
 transport and tool registration. The operator owns the private key and decision.
-An agent receives only a content-only tool. The candidate supports one create-only
+An agent receives only a content-only tool. This version supports one create-only
 UTF-8 document through the installed Harness 1.14.2 guarded writer; it does not
 call a model, provide a tool server, attest Git provenance, or isolate an agent
 with unrestricted Python or filesystem access.

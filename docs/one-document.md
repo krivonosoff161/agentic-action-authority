@@ -1,10 +1,10 @@
 # One document, one approval, one attempt
 
-This guide describes the **candidate onboarding API on `codex/product-onboarding`**.
-The published 0.1.1 wheel does not have `DocumentHost` or the new setup flags.
-Install an exact candidate wheel using the checkout route in the README before
-following these steps; a wheel filename or version alone does not prove which
-code it contains. Host and operator are separate
+This guide uses the **0.2.0 onboarding API**. Confirm the exact 0.2.0 package
+is available and install it using the [README route](../README.md#start-with-one-document).
+Version 0.1.1 does not have `DocumentHost` or the required fingerprint and
+host-repository setup flags. Existing 0.1.1 tasks are not automatically migrated;
+see the [upgrade notes](upgrading-0.2.md). Host and operator are separate
 roles, even if exercised manually on one machine. Use only public source material
 you are authorized to reuse. The host does not generate text or call a model:
 supply the already-proposed UTF-8 document.

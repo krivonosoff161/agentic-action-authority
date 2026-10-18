@@ -6,13 +6,15 @@ rebuild a different wheel for another index.
 
 Before enabling publication, the owner must configure the `testpypi` and `pypi`
 GitHub environments: required reviewer `krivonosoff161`, custom deployment policy
-allowing only tags `v0.1.0` (retained history) and `v0.1.1` (current). Configure each index Trusted Publisher for this
+allowing only tags `v0.1.0`, `v0.1.1` (retained history) and `v0.2.0` (this release).
+Adding the new exact tag requires the owner's scoped approval; preserve prior
+entries and reviewer protections. Configure each index Trusted Publisher for this
 repository's `release.yml` and its matching environment. No API token is stored
 in this repository. Naming an environment in YAML does not create these controls;
 the release preflight checks live reviewer and exact-tag policy metadata.
 
 1. Merge the checked PR; wait for post-merge checks and Gitleaks.
-2. Tag that merged SHA `v0.1.1`. Wait for tag-triggered `checks.yml` AND Gitleaks.
+2. Tag that merged SHA `v0.2.0`. Wait for tag-triggered `checks.yml` AND Gitleaks.
    The tag build makes one wheel and all four Linux/Windows core/adapter lanes
    install that same artifact. Keep the build run ID and SHA-256.
 3. Dispatch `release.yml` ON THE TAG with `target=testpypi`, `mode=publish`, and

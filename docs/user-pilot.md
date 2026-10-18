@@ -1,8 +1,8 @@
 # Bounded external developer exercise
 
 This is a **proposed exercise**, not a completed pilot or independent human
-acceptance. The candidate `DocumentHost` API is not in the published 0.1.1
-wheel. Give participants a precisely identified candidate wheel, the
+acceptance. Use a precisely identified 0.2.0 wheel after verifying its
+availability; 0.1.1 lacks `DocumentHost`. Give participants that wheel, the
 [integration guide](integration.md), disposable public source and document
 fixtures, and a separate operator role with synthetic keys. Do not use real
 keys, private documents, provider credentials, or production destinations.
@@ -22,7 +22,7 @@ Compare three approaches under the same trust and filesystem assumptions:
 |---|---|---|
 | Existing native approval | Their framework's human approval mechanism plus a trusted host callback | How it binds the exact document and destination, stores/rechecks decisions, prevents repeated effects, and recovers after interruption. |
 | Git review | A normal protected PR/review flow where the document is a reviewed repository change | Whether stale approval is dismissed after a changed diff and whether the actual target action is fully covered by that repository workflow. |
-| Action Authority candidate | Installed `DocumentHost`, separate operator CLI, optional Harness writer | Whether the integration reduces host work for exact binding, one attempt, and recovery without introducing confusing or unsafe steps. |
+| Action Authority 0.2.0 | Installed `DocumentHost`, separate operator CLI, optional Harness writer | Whether the integration reduces host work for exact binding, one attempt, and recovery without introducing confusing or unsafe steps. |
 
 Do not assume the baselines are weak. A sound native callback can implement the
 same checks; a repository document may already be sufficiently governed by Git
