@@ -122,6 +122,28 @@ class CoreTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("agentic-action-authority[harness]", result.stderr)
 
+    def test_document_host_names_missing_optional_extra_without_core_side_effect(self):
+        selected = Path(ash_action_authority.__file__).resolve()
+        probe = "\n".join((
+            "import sys",
+            "sys.path.insert(0, sys.argv[1])",
+            "sys.modules['agentic_security_harness'] = None",
+            "import ash_action_authority",
+            "assert 'ash_action_authority.document' not in sys.modules",
+            "try:",
+            "    from ash_action_authority import DocumentHost",
+            "except ImportError as exc:",
+            "    assert 'agentic-action-authority[harness]' in str(exc)",
+            "else:",
+            "    raise AssertionError('missing adapter must not import')",
+            "assert ash_action_authority.ActionCore",
+        ))
+        result = subprocess.run(
+            [sys.executable, "-I", "-c", probe, str(selected.parent.parent)],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_generic_schema_and_domain_are_closed(self):
         request = self.gate.request()
         self.assertEqual(request["domain"], GENERIC_REQUEST_DOMAIN)

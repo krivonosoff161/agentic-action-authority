@@ -5,6 +5,15 @@ from .protocol import ProtocolError, canonical, decision_message, request_digest
 
 
 def __getattr__(name):
+    if name == "DocumentHost":
+        try:
+            from .document import DocumentHost
+        except ModuleNotFoundError as exc:
+            if (exc.name == "agentic_security_harness"
+                    or (exc.name or "").startswith("agentic_security_harness.")):
+                raise ImportError("DocumentHost requires agentic-action-authority[harness]") from exc
+            raise
+        return DocumentHost
     if name == "ActionGate":
         try:
             from .engine import ActionGate
@@ -18,6 +27,7 @@ def __getattr__(name):
     raise AttributeError(name)
 
 __all__ = [
+    "DocumentHost",
     "ActionGate",
     "ActionCore",
     "EffectPort",

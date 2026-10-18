@@ -16,6 +16,17 @@ without Harness. Importing ActionGate loads the optional file adapter. The opera
 CLI is never an agent tool. The host CLI is the file adapter's reference host,
 not an unrestricted execution server.
 
+The unreleased `codex/product-onboarding` candidate adds public `DocumentHost`
+as an installed facade over this existing host state and writer. Published 0.1.1
+does not contain it. `prepare` validates an independently supplied expected
+public-key fingerprint before task creation, then binds a host-declared
+`owner/repository` and exact host revision. Structural validation does not
+prove remote repository provenance. `open` reopens retained state without
+recreating it; `review_files`, `request`, and `export_request` let the trusted
+host transfer an exact review. `apply_decision` remains host-only. `bind_tool`
+exposes only `submit_approved_document({"content": ...})`; `status(recover=True)`
+performs readback or fencing without delivery. See the [integration guide](integration.md).
+
 ## Approval binding
 
 File v1 binds app/task/operation/initiator, exact UTF-8 hash and length,
@@ -42,6 +53,9 @@ SQLite serialization orders approval, revocation and one execution attempt.
 PENDING_APPROVAL -> APPROVED -> EXECUTING spends admission at the durable BEGIN.
 Errors after that point are uncertain, not new permission. Revocation before BEGIN
 rotates epoch/challenge; after BEGIN it does not acknowledge cancellation.
+An expired request needs a new task and review. An accepted pre-BEGIN revoke
+needs a newly exported request and signed decision. Neither `UNKNOWN` nor an
+interrupted call permits replay of the old action.
 Bounded control-log capacity is checked before effects; history is not truncated.
 
 Status is historical. Recover verifies/fences using the trusted adapter and never

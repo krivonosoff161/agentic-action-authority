@@ -18,10 +18,12 @@ EXPECTED_MODULES = frozenset(
         "test_boundaries",
         "test_cli",
         "test_core",
+        "test_document",
         "test_embedding",
         "test_engine",
         "test_host",
         "test_native_parity",
+        "test_onboarding",
         "test_operator",
         "test_process",
         "test_protocol",
@@ -31,6 +33,8 @@ EXPECTED_SOURCE_FILES = frozenset(
     {
         "__init__.py",
         "core.py",
+        "dispatch.py",
+        "document.py",
         "engine.py",
         "host.py",
         "operator.py",
@@ -40,7 +44,7 @@ EXPECTED_SOURCE_FILES = frozenset(
 EXPECTED_EXAMPLE_FILES = frozenset({"content_only_dispatch.py"})
 CORE_MODULES = frozenset({"test_core", "test_protocol", "test_operator"})
 # Updated only after reviewing the explicit test inventory.
-EXPECTED_TESTS = {"core": 28, "harness": 72}
+EXPECTED_TESTS = {"core": 29, "harness": 93}
 sys.dont_write_bytecode = True
 
 

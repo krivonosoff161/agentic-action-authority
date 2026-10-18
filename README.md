@@ -15,6 +15,10 @@ Version **0.1.1** is an experimental API. Check [Releases](https://github.com/kr
 and [PyPI](https://pypi.org/project/agentic-action-authority/0.1.1/) for publication
 status. Installing does not enroll an operator or authorize an action.
 
+The `DocumentHost` onboarding facade described below is a **branch candidate**, not
+part of the published 0.1.1 wheel. Choose the published route for the released
+API, or build and verify the exact candidate checkout before using that facade.
+
 ## What it changes
 
 Your agent proposes text. Your host fixes the action, destination, policy,
@@ -44,7 +48,30 @@ Omit `[harness]` for the standalone approval core. The file adapter deliberately
 pins Harness **1.14.2**. Other Harness versions are not automatically a supported
 pairing; compatibility evidence belongs to the exact installed checks below.
 
-For an auditable checkout build and hash-locked installation:
+### Candidate onboarding API
+
+`DocumentHost` composes the installed create-only file path for a trusted host.
+It requires an operator fingerprint obtained through an independent trusted
+channel and the host application's owner/repository plus exact revision. These
+are bound declarations, not remote Git attestation. The host prepares the task,
+transfers exact request and content for separate operator signing, applies the
+decision, and gives the agent only a content-only callback. It never generates
+an operator key or signs on the agent's behalf.
+
+For this branch candidate, record the exact source commit, build its wheel, use
+the hash-locked checkout installation below in a fresh environment, and verify
+the installed wheel against that source. The candidate currently retains 0.1.1
+package metadata; its filename and version do **not** mean that PyPI's 0.1.1
+wheel contains `DocumentHost`. Do not use the PyPI install command above for
+the [candidate integration guide](docs/integration.md) or the updated
+[one-document path](docs/one-document.md). The
+[external developer exercise](docs/user-pilot.md) is a proposed evaluation,
+not a completed user study. The [approval alternatives](docs/alternatives.md)
+compare documented native HITL and Git review contracts with this candidate;
+they do not report benchmark or adoption results.
+
+For an auditable checkout build and hash-locked installation of the exact
+source currently checked out:
 
 ```text
 python -m venv .venv
@@ -64,6 +91,10 @@ Follow the [one-document guide](https://github.com/krivonosoff161/agentic-action
 apply decision → write → read back. Operator signing is interactive. Private keys
 and passphrases never belong in chat, an agent prompt or command-line arguments.
 
+That versioned link is the **published 0.1.1 guide**. The current checkout's
+[one-document guide](docs/one-document.md) covers the candidate flags and
+recovery routes and requires the candidate wheel above.
+
 ## Embed in your agent application
 
 The routing example [content_only_dispatch.py](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.1/examples/content_only_dispatch.py)
@@ -75,6 +106,8 @@ gate, signer or unrestricted filesystem/Python access.
 
 See [architecture and adapter contract](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.1.1/docs/architecture.md) for `ActionCore`,
 `ActionGate`, protocol domains, state transitions and adapter obligations.
+For this branch candidate's public `DocumentHost` integration, use the
+[integration guide](docs/integration.md), not private host helpers.
 
 ## Verification and provenance
 

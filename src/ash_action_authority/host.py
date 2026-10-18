@@ -10,8 +10,10 @@ import argparse
 import base64
 import binascii
 import hashlib
+import hmac
 import importlib.util
 import json
+import re
 import secrets
 import sqlite3
 import time
@@ -69,11 +71,18 @@ def setup(
     source_path: Path,
     document_path: Path,
     *,
+    expected_key_fingerprint: str,
+    host_repository: str,
     host_revision: str,
     valid_seconds: int = 3600,
     allow_local_source_use: bool = False,
 ):
-    """Capture a host-declared PUBLIC source; retain candidate bytes without executing."""
+    """Capture PUBLIC input after trusted enrollment and host provenance declarations.
+
+    The fingerprint must come from an independent trusted operator channel, not
+    be calculated from the received public-key file to make this check pass.
+    Repository/revision is a host declaration, not remote provenance attestation.
+    """
     home = home.absolute()
     _directory(home.parent)
     if home.exists() or home.is_symlink():
@@ -82,6 +91,10 @@ def setup(
         raise AuthorityError("valid_seconds_out_of_range")
     if allow_local_source_use is not True:
         raise AuthorityError("host_must_authorize_local_public_source_use")
+    if type(expected_key_fingerprint) is not str or not re.fullmatch(
+        r"[0-9a-f]{64}", expected_key_fingerprint
+    ):
+        raise AuthorityError("invalid_expected_key_fingerprint")
     source = _read_bounded(source_path, 65536)
     document = _read_bounded(document_path, 65536)
     if not source or not document:
@@ -94,6 +107,8 @@ def setup(
         raise AuthorityError("invalid_public_key") from exc
     if len(public_key) != 32:
         raise AuthorityError("invalid_public_key")
+    if not hmac.compare_digest(hashlib.sha256(public_key).hexdigest(), expected_key_fingerprint):
+        raise AuthorityError("operator_key_mismatch")
     now = int(time.time())
     origin = datetime.fromtimestamp(now, UTC)
     restrictions = DocumentSourceRestrictions.bind(
@@ -118,17 +133,21 @@ def setup(
         (WorkspaceSource("input", "declared-source", source, restrictions),)
     )
     operation_id = secrets.token_hex(32)
-    # The revision is supplied by the host, not invented from a digest or a model.
-    profile = build_coverage_expectation_profile_v1(
-        project_id="agentic-security-harness",
-        repository_id="krivonosoff161/agentic-security-harness",
-        repository_sha=host_revision,
-        expected_channels=("input",),
-        expected_event_count=1,
-        expectation_source_sha256=hashlib.sha256(
-            b"one host-declared captured public input"
-        ).hexdigest(),
-    )
+    # Bind the actual host declaration, not an invented Harness repository identity.
+    # Structural validation cannot prove that a commit belongs to that repository.
+    try:
+        profile = build_coverage_expectation_profile_v1(
+            project_id="document-host",
+            repository_id=host_repository,
+            repository_sha=host_revision,
+            expected_channels=("input",),
+            expected_event_count=1,
+            expectation_source_sha256=hashlib.sha256(
+                b"one host-declared captured public input"
+            ).hexdigest(),
+        )
+    except (ValidationError, ValueError, TypeError) as exc:
+        raise AuthorityError("invalid_host_provenance") from exc
     home.mkdir(mode=0o700)
     output = home / "output"
     output.mkdir()
@@ -269,12 +288,46 @@ def apply(home, decision_path):
         signature = base64.b64decode(detached["signature_base64"], validate=True)
     except (ValueError, TypeError, binascii.Error) as exc:
         raise AuthorityError("invalid_detached_decision") from exc
-    return _restore(home).apply_decision(detached["message"], signature)
+    gate = _restore(home)
+    try:
+        return gate.apply_decision(detached["message"], signature)
+    except ProtocolError as exc:
+        # The protocol deliberately groups expired and future-issued decisions.
+        # Give an expired HOST request a useful route without asserting that the
+        # supplied decision was authentic. No failed decision is acknowledged.
+        if str(exc) == "decision_time_invalid" and int(time.time()) >= gate.request()["expires_at"]:
+            raise AuthorityError("approval_expired") from exc
+        raise
+
+
+_PREFLIGHT_STEPS = {
+    "approval_expired": "Preserve the old task and decision. Prepare a new task and obtain a fresh operator review; do not extend the old approval or replay it.",
+    "operator_key_mismatch": "Stop enrollment. Verify the key and fingerprint with the operator through an independent trusted channel; do not replace the expected fingerprint just to proceed.",
+    "invalid_expected_key_fingerprint": "Supply the operator's separately verified lowercase SHA-256 public-key fingerprint.",
+    "invalid_public_key": "Obtain the operator's public key through the agreed trusted channel; never supply a private key.",
+    "invalid_host_provenance": "Supply your trusted host application's owner/repository and exact Git revision together; these are declarations, not automatic provenance proof.",
+    "host_must_authorize_local_public_source_use": "The host must explicitly authorize use of this public source before setup.",
+    "valid_seconds_out_of_range": "Choose an approval lifetime between 60 and 86400 seconds before setup.",
+    "empty_document_or_source": "Supply nonempty public UTF-8 source and proposed document files.",
+    "retained_input_changed": "Stop using this task. Inspect the retained source/document and state; do not edit them to force a retry. A changed action needs a new task and new review.",
+    "invalid_host_configuration": "Stop and inspect retained host configuration. Do not recreate or overwrite the task to force execution.",
+}
+
+_REFUSAL_STEPS = {
+    "not_approved": "Obtain and apply an operator decision for the current request before submitting the unchanged document.",
+    "object_changed": "Submit only the exact reviewed document. A different document needs a new task and new operator review.",
+    "invalid_content": "Supply UTF-8 text within the declared bound, with no path or approval fields.",
+    "expired": "Preserve this task. Prepare a new task with a new lifetime and obtain a new operator decision; do not renew or replay the old approval.",
+    "already_consumed": "Run status --recover to inspect the existing attempt; do not submit it again.",
+    "capacity": "Stop submitting to this task and inspect status --recover; a new action requires a new task and review.",
+}
 
 
 def _cli_error(command: str, reason: str, *, uncertain: bool = False) -> int:
     """Emit only fixed vocabulary, never an exception message or supplied bytes."""
-    if reason == "busy_no_decision_acknowledged":
+    if reason in _PREFLIGHT_STEPS:
+        next_step = _PREFLIGHT_STEPS[reason]
+    elif reason == "busy_no_decision_acknowledged":
         next_step = (
             "No decision was acknowledged; inspect status after the active operation finishes."
         )
@@ -286,7 +339,7 @@ def _cli_error(command: str, reason: str, *, uncertain: bool = False) -> int:
         next_step = "Inspect the existing home and choose a new empty directory for setup."
     elif command == "setup":
         next_step = (
-            "Check the public input paths, host revision, and local-source "
+            "Check the public input paths, host repository/revision, and local-source "
             "authorization; use a new empty home."
         )
     elif command == "apply-decision":
@@ -329,10 +382,10 @@ def _cli_result(command: str, result: dict) -> int:
         elif result.get("applied") is False:
             result = {
                 **result,
-                "next_step": (
+                "next_step": _REFUSAL_STEPS.get(result.get("reason"), (
                     "Inspect status --recover before deciding whether a new setup "
                     "is needed; do not replay blindly."
-                ),
+                )),
             }
             code = 1
         else:
@@ -367,9 +420,12 @@ def main(argv=None):
     )
     init.add_argument("--home", type=Path, required=True)
     init.add_argument("--public-key", type=Path, required=True)
+    init.add_argument("--expected-key-fingerprint", required=True,
+                      help="operator fingerprint received independently through a trusted channel")
     init.add_argument("--source", type=Path, required=True)
     init.add_argument("--document", type=Path, required=True)
-    init.add_argument("--host-revision", required=True)
+    init.add_argument("--host-repository", required=True, help="trusted host application's owner/repository")
+    init.add_argument("--host-revision", required=True, help="exact revision of that host repository; host-declared, not attested")
     init.add_argument("--valid-seconds", type=int, default=3600)
     init.add_argument(
         "--allow-local-source-use",
@@ -396,6 +452,8 @@ def main(argv=None):
                 args.public_key,
                 args.source,
                 args.document,
+                expected_key_fingerprint=args.expected_key_fingerprint,
+                host_repository=args.host_repository,
                 host_revision=args.host_revision,
                 valid_seconds=args.valid_seconds,
                 allow_local_source_use=args.allow_local_source_use,
@@ -430,6 +488,10 @@ def main(argv=None):
     ) as exc:
         if isinstance(exc, AuthorityError) and str(exc) == "home_exists_use_new_directory":
             reason = "home_exists_use_new_directory"
+        elif isinstance(exc, AuthorityError) and str(exc) in _PREFLIGHT_STEPS:
+            reason = str(exc)
+        elif isinstance(exc, ProtocolError) and str(exc) == "decision_expired":
+            reason = "approval_expired"
         elif args.command == "apply-decision":
             reason = "decision_invalid_or_unverified"
         else:
