@@ -6,7 +6,8 @@ rebuild a different wheel for another index.
 
 Before enabling publication, the owner must configure the `testpypi` and `pypi`
 GitHub environments: required reviewer `krivonosoff161`, custom deployment policy
-allowing only tags `v0.1.0`, `v0.1.1` (retained history) and `v0.2.0` (this release).
+allowing only tags `v0.1.0`, `v0.1.1`, `v0.2.0` (retained history) and `v0.3.0`
+(this release).
 Adding the new exact tag requires the owner's scoped approval; preserve prior
 entries and reviewer protections. Configure each index Trusted Publisher for this
 repository's `release.yml` and its matching environment. No API token is stored
@@ -14,12 +15,13 @@ in this repository. Naming an environment in YAML does not create these controls
 the release preflight checks live reviewer and exact-tag policy metadata.
 
 1. Merge the checked PR; wait for post-merge checks and Gitleaks.
-2. Tag that merged SHA `v0.2.0`. Wait for tag-triggered `checks.yml` AND Gitleaks.
+2. Tag that merged SHA `v0.3.0`. Wait for tag-triggered `checks.yml` AND Gitleaks.
    The tag build makes one wheel and all four Linux/Windows core/adapter lanes
    install that same artifact. Keep the build run ID and SHA-256.
 3. Dispatch `release.yml` ON THE TAG with `target=testpypi`, `mode=publish`, and
    that `build_run`. Approve the environment only after reviewing its exact SHA.
    Upload uses OIDC; index readback then runs all four installed lanes.
+   The Harness lanes also run the finite route measurement against index bytes.
 4. Only a successful TestPyPI **publish** run creates `publication-testpypi`.
    Use its ID as `stage_run` for the PyPI publish dispatch with the SAME build.
    Staging binds the exact repository, workflow, tag, SHA, build ID and wheel hash.

@@ -27,6 +27,23 @@ def tool_descriptor() -> dict[str, Any]:
     }
 
 
+def _submit_outcome(submit: Callable[[], dict]) -> dict[str, str]:
+    """Map one host submission to the public coarse outcome without retrying."""
+    try:
+        result = submit()
+    except Exception:
+        # Storage failure can follow an effect; never report no-effect or retry.
+        return {"outcome": "uncertain", "reason": "host_recovery_required"}
+    if type(result) is not dict:
+        return {"outcome": "uncertain", "reason": "host_recovery_required"}
+    if result.get("applied") is True and result.get("status") == "DELIVERED_RECEIPT":
+        return {"outcome": "applied", "reason": "writer_receipt_recorded"}
+    reason = result.get("reason")
+    if result.get("applied") is False and type(reason) is str and reason in _REFUSALS:
+        return {"outcome": "refused", "reason": reason}
+    return {"outcome": "uncertain", "reason": "host_recovery_required"}
+
+
 def _make_dispatch(submit: Callable[[str], dict]) -> Callable[[str, object], dict[str, str]]:
     def dispatch(name: str, arguments: object) -> dict[str, str]:
         if type(name) is not str or name != TOOL_NAME:
@@ -37,19 +54,7 @@ def _make_dispatch(submit: Callable[[str], dict]) -> Callable[[str, object], dic
             or type(arguments["content"]) is not str
         ):
             return {"outcome": "refused", "reason": "invalid_arguments"}
-        try:
-            result = submit(arguments["content"])
-        except Exception:
-            # Storage failure can follow an effect; never report no-effect or retry.
-            return {"outcome": "uncertain", "reason": "host_recovery_required"}
-        if type(result) is not dict:
-            return {"outcome": "uncertain", "reason": "host_recovery_required"}
-        if result.get("applied") is True and result.get("status") == "DELIVERED_RECEIPT":
-            return {"outcome": "applied", "reason": "writer_receipt_recorded"}
-        reason = result.get("reason")
-        if result.get("applied") is False and type(reason) is str and reason in _REFUSALS:
-            return {"outcome": "refused", "reason": reason}
-        return {"outcome": "uncertain", "reason": "host_recovery_required"}
+        return _submit_outcome(lambda: submit(arguments["content"]))
 
     return dispatch
 

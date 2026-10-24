@@ -1,14 +1,17 @@
 # Embed one reviewed document in a trusted host
 
-This is the **0.2.0 `DocumentHost` API**. Confirm the exact 0.2.0 package is
+This is the **0.3.0 `DocumentHost` API**. Confirm the exact 0.3.0 package is
 available and install it using the [README](../README.md#start-with-one-document).
 The required `--expected-key-fingerprint` / `--host-repository` setup flags
 and `DocumentHost` are absent from the 0.1.1 wheel. Existing 0.1.1 task state
 is not automatically migrated; see the [upgrade notes](upgrading-0.2.md).
+The published 0.2.0 wheel has the content callback but not the 0.3.0
+`execute_approved()` method. Check [0.3.0 release evidence](releases/v0.3.0.md)
+before using the new method from an index installation.
 
 The host owns task state, public source admission, operator enrollment, review
-transport and tool registration. The operator owns the private key and decision.
-An agent receives only a content-only tool. This version supports one create-only
+transport and execution. The operator owns the private key and decision.
+The agent does not receive the host object. This version supports one create-only
 UTF-8 document through the installed Harness 1.14.2 guarded writer; it does not
 call a model, provide a tool server, attest Git provenance, or isolate an agent
 with unrestricted Python or filesystem access.
@@ -62,7 +65,7 @@ The operator enters the local passphrase and the full confirmation shown by
 the CLI. Transport the detached decision back to the trusted host. Signing
 does not write the document.
 
-## Apply the decision and expose only the content tool
+## Apply the decision and execute from trusted host state
 
 ```python
 from pathlib import Path
@@ -73,28 +76,40 @@ host = DocumentHost.open(Path("task-001"))
 decision = host.apply_decision(Path("approved.json"))
 if not decision.get("accepted"):
     raise RuntimeError("operator decision was not accepted")
-descriptor = host.tool_descriptor()
-dispatch = host.bind_tool()
-
-# Register ONLY descriptor and dispatch with your agent framework, if any.
-# For a provider-free exercise, call the same callback with the frozen text:
-result = dispatch("submit_approved_document", {"content": Path("proposed.txt").read_bytes().decode("utf-8")})
+result = host.execute_approved()  # host-only; no content, path or approval arguments
 readback = host.status(recover=True)
 ```
 
-The callback accepts only the named tool and one `content` string. It rejects
-path, approval and extra fields; changed content is refused. The host still
-controls the destination and retains the state. Registering a callback is not
-a sandbox if the agent can also write files or execute arbitrary host code.
-Do not normalize line endings after review: `Path.read_text()` can translate
-CRLF to LF on Windows, changing the approved bytes. Read bytes and decode UTF-8
-as shown, then submit that exact text without rewriting it.
+`execute_approved()` restores the retained exact document and submits it through
+the same approval gate and Harness writer as the host CLI. It does not sign,
+approve, select a destination or retry a spent attempt. The original proposal
+file is no longer needed after preparation; never edit the retained task files.
 `status()` is historical; `status(recover=True)` performs readback or fencing
 without delivery. Inspect the returned `outcome` and recovered state; do not
 infer success from a submitted call alone.
 The host can inspect `host.request()` for the current request; use
 `host.export_request(new_path)` when a fresh review file is required, and
 never overwrite an earlier review artifact.
+
+### Content callback compatibility
+
+Applications that still need the 0.2.0 shape may obtain
+`host.tool_descriptor()` and `host.bind_tool()`. Register only that
+descriptor and callback with the agent framework. The callback accepts the
+named `submit_approved_document` tool with exactly one `content` string; it
+rejects path, approval and extra fields. Submit only the reviewed bytes:
+
+```python
+descriptor = host.tool_descriptor()
+dispatch = host.bind_tool()
+text = host.review_files["content"].read_bytes().decode("utf-8")
+result = dispatch("submit_approved_document", {"content": text})
+```
+
+Do not use `Path.read_text()` here: on Windows it can translate CRLF to LF and
+change the approved bytes. The host-only `execute_approved()` route avoids this
+caller-side read/decoding step. Neither a callback nor this facade isolates an
+agent that can also run arbitrary host code or write files.
 
 ## Refusal and recovery routes
 

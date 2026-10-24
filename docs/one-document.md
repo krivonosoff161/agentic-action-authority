@@ -1,10 +1,11 @@
 # One document, one approval, one attempt
 
-This guide uses the **0.2.0 onboarding API**. Confirm the exact 0.2.0 package
+This guide uses the **0.3.0 onboarding API**. Confirm the exact 0.3.0 package
 is available and install it using the [README route](../README.md#start-with-one-document).
 Version 0.1.1 does not have `DocumentHost` or the required fingerprint and
 host-repository setup flags. Existing 0.1.1 tasks are not automatically migrated;
-see the [upgrade notes](upgrading-0.2.md). Host and operator are separate
+see the [0.1.1 to 0.2.0 upgrade notes](upgrading-0.2.md). The 0.2.0 wheel
+does not have the 0.3.0 `DocumentHost.execute_approved()` method. Host and operator are separate
 roles, even if exercised manually on one machine. Use only public source material
 you are authorized to reuse. The host does not generate text or call a model:
 supply the already-proposed UTF-8 document.
@@ -56,7 +57,8 @@ Receive BOTH request.json and document.txt through a trusted review channel:
 <python> -m ash_action_authority.operator sign --private operator.pem --request new-task/request.json --content new-task/document.txt --decision approve --out approved.json
 ```
 
-Inspect escaped exact content and destination. Type the full confirmation shown
+Inspect the labelled decision, application/task, destination, byte count and
+deadline, then the full escaped exact request and document. Type the full confirmation shown
 by the program with its ACTUAL digest prefix, not an ellipsis. Enter the passphrase
 locally. There is no unattended --yes bypass. The detached decision is not the
 private key. Signing alone does not execute anything.
@@ -73,6 +75,26 @@ Success creates the file once, then verifies exact bytes. A second run is refuse
 Status without --recover is historical, not current readback. CLI exit 0 means
 command success, 1 refusal, 2 uncertainty/busy coordination. A failed command does
 not establish that no effect happened.
+
+For an embedded Python host, the equivalent 0.3.0 route is:
+
+```python
+from pathlib import Path
+from ash_action_authority import DocumentHost
+
+host = DocumentHost.open(Path("new-task"))
+decision = host.apply_decision(Path("approved.json"))
+if not decision.get("accepted"):
+    raise RuntimeError("operator decision was not accepted")
+result = host.execute_approved()
+readback = host.status(recover=True)
+```
+
+The host CLI `run`
+already reads the retained reviewed bytes; the Python method exposes the same
+path without a post-review content argument. See the [integration guide](integration.md)
+for a complete example. Keep the host object and decision application outside
+the agent's tool registry.
 
 ## Revoke and recover
 

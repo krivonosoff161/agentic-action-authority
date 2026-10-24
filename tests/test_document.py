@@ -249,6 +249,129 @@ class DocumentHostJourneyTests(unittest.TestCase):
             {"outcome": "refused", "reason": "already_consumed"},
         )
 
+    def test_host_execute_requires_approval_and_accepts_no_arguments(self) -> None:
+        host = self.prepare()
+        self.assertEqual(
+            host.execute_approved(), {"outcome": "refused", "reason": "not_approved"}
+        )
+        self.assertFalse(self.target.exists())
+        with self.assertRaises(TypeError):
+            host.execute_approved(self.content)
+        with self.assertRaises(TypeError):
+            host.execute_approved(content=self.content)
+        with self.assertRaises(TypeError):
+            host.execute_approved(path=self.target)
+        with self.assertRaises(TypeError):
+            host.execute_approved(approve=True)
+        self.assertFalse(self.target.exists())
+        descriptor = host.tool_descriptor()
+        self.assertEqual(descriptor["name"], TOOL_NAME)
+        self.assertEqual(set(descriptor["parameters"]["properties"]), {"content"})
+
+    def test_host_execute_uses_retained_exact_bytes_without_original_proposal(self) -> None:
+        self.content = "Café — reviewed bytes\r\n第二行: exact.\r\n"
+        for original_state in ("changed", "removed"):
+            with self.subTest(original_state=original_state):
+                self.home = self.root / f"task-{original_state}"
+                self.target = self.home / "output" / "document.md"
+                self.document.write_bytes(self.content.encode("utf-8"))
+                host = self.prepare()
+                self.approve(host)
+                if original_state == "changed":
+                    self.document.write_bytes(b"changed original proposal\n")
+                else:
+                    self.document.unlink()
+                self.assertEqual(
+                    DocumentHost.open(self.home).execute_approved(),
+                    {"outcome": "applied", "reason": "writer_receipt_recorded"},
+                )
+                self.assertEqual(self.target.read_bytes(), self.content.encode("utf-8"))
+                recovered = host.status(recover=True)
+                self.assertEqual(recovered["state"], "DELIVERED_RECEIPT")
+                self.assertTrue(recovered["current_verified"])
+
+    def test_host_execute_refuses_changed_retained_inputs_without_effect(self) -> None:
+        for name in ("document.txt", "source.txt"):
+            with self.subTest(name=name):
+                self.home = self.root / f"task-{name}"
+                self.target = self.home / "output" / "document.md"
+                host = self.prepare()
+                self.approve(host)
+                (self.home / name).write_bytes(b"changed retained input\n")
+                self.assertEqual(
+                    host.execute_approved(),
+                    {"outcome": "uncertain", "reason": "host_recovery_required"},
+                )
+                self.assertFalse(self.target.exists())
+
+    def test_host_execute_replay_is_refused_without_second_effect(self) -> None:
+        host = self.prepare()
+        self.approve(host)
+        self.assertEqual(host.execute_approved()["outcome"], "applied")
+        before = self.target.stat()
+        self.assertEqual(
+            DocumentHost.open(self.home).execute_approved(),
+            {"outcome": "refused", "reason": "already_consumed"},
+        )
+        after = self.target.stat()
+        self.assertEqual(
+            (after.st_dev, after.st_ino, after.st_mtime_ns),
+            (before.st_dev, before.st_ino, before.st_mtime_ns),
+        )
+
+    def test_host_execute_expiry_refuses_without_effect(self) -> None:
+        host = self.prepare(valid_seconds=60)
+        self.approve(host)
+        with patch.object(ActionCore, "_now", return_value=host.request()["expires_at"]):
+            result = host.execute_approved()
+        self.assertEqual(result, {"outcome": "refused", "reason": "expired"})
+        self.assertFalse(self.target.exists())
+
+    def test_host_execute_revocation_requires_fresh_challenge_approval(self) -> None:
+        host = self.prepare()
+        old_request = host.request()
+        old_approval = self.detached(old_request)
+        self.assertEqual(
+            host.apply_decision(self.detached(old_request, "revoke"))["reason"],
+            "revoked_before_begin",
+        )
+        self.assertNotEqual(host.request()["challenge"], old_request["challenge"])
+        with self.assertRaises(ProtocolError):
+            host.apply_decision(old_approval)
+        self.assertEqual(
+            host.execute_approved(), {"outcome": "refused", "reason": "not_approved"}
+        )
+        self.assertFalse(self.target.exists())
+        self.approve(host)
+        self.assertEqual(host.execute_approved()["outcome"], "applied")
+
+    def test_host_execute_post_effect_save_failure_recovers_without_replay(self) -> None:
+        host = self.prepare()
+        self.approve(host)
+        original_save = ActionCore._save
+
+        def fail_outer_outcome(self_core, state, *, kind=None, **kwargs):
+            if kind == "outcome":
+                raise sqlite3.OperationalError("synthetic_post_effect_save_failure")
+            return original_save(self_core, state, kind=kind, **kwargs)
+
+        with patch.object(ActionCore, "_save", fail_outer_outcome):
+            result = host.execute_approved()
+        self.assertEqual(result, {"outcome": "uncertain", "reason": "host_recovery_required"})
+        self.assertEqual(self.target.read_bytes(), self.content.encode("utf-8"))
+        before = self.target.stat()
+        recovered = DocumentHost.open(self.home).status(recover=True)
+        self.assertEqual(recovered["state"], "DELIVERED_RECEIPT")
+        self.assertTrue(recovered["current_verified"])
+        after = self.target.stat()
+        self.assertEqual(
+            (after.st_dev, after.st_ino, after.st_mtime_ns),
+            (before.st_dev, before.st_ino, before.st_mtime_ns),
+        )
+        self.assertEqual(
+            host.execute_approved(), {"outcome": "refused", "reason": "already_consumed"}
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

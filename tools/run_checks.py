@@ -44,7 +44,7 @@ EXPECTED_SOURCE_FILES = frozenset(
 EXPECTED_EXAMPLE_FILES = frozenset({"content_only_dispatch.py"})
 CORE_MODULES = frozenset({"test_core", "test_protocol", "test_operator"})
 # Updated only after reviewing the explicit test inventory.
-EXPECTED_TESTS = {"core": 29, "harness": 93}
+EXPECTED_TESTS = {"core": 33, "harness": 112}
 sys.dont_write_bytecode = True
 
 
