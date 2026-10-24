@@ -8,8 +8,8 @@
   "summary": "Separately owned exact-action approval core with an optional Harness create-only file adapter; no automatic extension loading.",
   "package": {
     "name": "agentic-action-authority",
-    "version": "0.2.0",
-    "install": "Follow the versioned 0.2.0 installation in README.md; consult Releases for verified index publication.",
+    "version": "0.3.0",
+    "install": "Follow the versioned 0.3.0 installation in README.md; consult docs/releases/v0.3.0.md for verified index publication.",
     "entry_points": [
       "action-authority-operator",
       "action-authority-host"
