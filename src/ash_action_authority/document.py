@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .dispatch import _make_dispatch, tool_descriptor
+from .dispatch import _make_dispatch, _submit_outcome, tool_descriptor
 from .host import _restore, apply, setup
 from .operator import _create_once
 from .protocol import canonical
@@ -81,6 +81,18 @@ class DocumentHost:
         """
         gate = _restore(self.home)
         return gate.recover() if recover else gate.status()
+
+    def execute_approved(self) -> dict[str, str]:
+        """Host-only: submit the exact retained document through the existing gate.
+
+        Never approves or retries an attempt. Unclear failures require recovery.
+        Do not register this method as an agent tool.
+        """
+        def submit_retained() -> dict:
+            gate = _restore(self.home)
+            return gate.submit(gate.content)
+
+        return _submit_outcome(submit_retained)
 
     @staticmethod
     def tool_descriptor() -> dict[str, Any]:

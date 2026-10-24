@@ -6,13 +6,13 @@ import base64
 import hashlib
 import json
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from ash_action_authority.operator import OperatorError, generate_keypair, sign_request
+from ash_action_authority.operator import OperatorError, generate_keypair, main, sign_request
 from ash_action_authority.protocol import build_request, canonical, request_digest, verify_decision
 
 
@@ -189,6 +189,64 @@ class OperatorTests(unittest.TestCase):
                 )
             confirmation.assert_not_called()
         self.assertEqual(self.out.read_bytes(), b"preexisting detached decision")
+
+    def test_labelled_review_matches_exact_request_without_terminal_controls(self) -> None:
+        _, shown = self._sign()
+        lines = dict(line.split(" ", 1) for line in shown.splitlines() if line.startswith("REVIEW_"))
+        binding = self.request["binding"]
+        self.assertEqual(lines["REVIEW_DECISION"], "APPROVE")
+        self.assertEqual(json.loads(lines["REVIEW_DESTINATION_JSON"]), {
+            "root_path": binding["root_path"], "filename": binding["filename"],
+        })
+        self.assertEqual(json.loads(lines["REVIEW_ACTION_JSON"]), {
+            name: binding[name] for name in ("app_id", "task_id", "initiator", "action")
+        })
+        self.assertEqual(int(lines["REVIEW_CONTENT_BYTES"]), len(self.content.encode("utf-8")))
+        self.assertEqual(int(lines["REVIEW_SECONDS_REMAINING"]), 3600)
+        self.assertEqual(int(lines["REVIEW_DEADLINE_UNIX"]), self.expiry)
+        self.assertEqual(json.loads(lines["REVIEW_DOCUMENT_UTF8_JSON"]), self.content)
+        self.assertNotIn("\x1b", shown)
+        self.assertIn("Signing does not execute", shown)
+
+    def test_revoke_display_does_not_claim_cancellation(self) -> None:
+        _, shown = self._sign("revoke")
+        self.assertIn("REVIEW_DECISION REVOKE", shown)
+        self.assertIn("signing is not cancellation", shown)
+
+    def test_operator_cli_sign_uses_same_review_and_exact_confirmation(self) -> None:
+        shown = StringIO()
+        with (
+            patch("ash_action_authority.operator.time.time", return_value=self.now),
+            patch("builtins.input", return_value="APPROVE " + request_digest(self.request)[:12]),
+            patch("ash_action_authority.operator.getpass.getpass", return_value=self.password),
+            redirect_stdout(shown),
+        ):
+            code = main([
+                "sign", "--private", str(self.private), "--request", str(self.request_path),
+                "--content", str(self.content_path), "--decision", "approve", "--out", str(self.out),
+            ])
+        self.assertEqual(code, 0)
+        self.assertIn("REVIEW_DESTINATION_JSON", shown.getvalue())
+        detached = json.loads(self.out.read_text("ascii"))
+        self.assertEqual(verify_decision(
+            self.request, detached["message"], base64.b64decode(detached["signature_base64"]),
+            self.public_bytes, now=self.now,
+        )["decision"], "approve")
+
+    def test_operator_cli_cancel_never_opens_signer(self) -> None:
+        with (
+            patch("ash_action_authority.operator.time.time", return_value=self.now),
+            patch("builtins.input", return_value="NO"),
+            patch("ash_action_authority.operator._load_signer") as load_signer,
+            redirect_stdout(StringIO()), redirect_stderr(StringIO()),
+        ):
+            code = main([
+                "sign", "--private", str(self.private), "--request", str(self.request_path),
+                "--content", str(self.content_path), "--decision", "approve", "--out", str(self.out),
+            ])
+        self.assertEqual(code, 1)
+        load_signer.assert_not_called()
+        self.assertFalse(self.out.exists())
 
 
 if __name__ == "__main__":

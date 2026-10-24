@@ -95,6 +95,13 @@ remain historical evidence; do not apply 0.2.0 setup instructions to a 0.1.1 whe
 
 ## Embed in your agent application
 
+**Unreleased checkout improvement:** the trusted host can now execute the retained
+reviewed document with `DocumentHost.execute_approved()`, without a second content
+argument. The signing CLI also labels the destination and deadline before full
+review. These changes are **not in the published 0.2.0 wheel**; use the verified
+source build above and the [approved-execution guide](docs/approved-execution.md).
+The versioned instructions below remain the 0.2.0 compatibility route.
+
 The routing example [content_only_dispatch.py](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.2.0/examples/content_only_dispatch.py)
 accepts only `submit_approved_document({"content": "..."})`, rejects paths and
 approval fields, and reports uncertainty without retrying. The host creates and

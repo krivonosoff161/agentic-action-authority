@@ -6,6 +6,11 @@ The required `--expected-key-fingerprint` / `--host-repository` setup flags
 and `DocumentHost` are absent from the 0.1.1 wheel. Existing 0.1.1 task state
 is not automatically migrated; see the [upgrade notes](upgrading-0.2.md).
 
+For the **unreleased source checkout**, [host-only approved execution](approved-execution.md)
+removes the content re-submission after review. It is not available in the
+published 0.2.0 wheel. Preparation, independent enrollment and signing below
+remain unchanged; only the final host execution call is simpler.
+
 The host owns task state, public source admission, operator enrollment, review
 transport and tool registration. The operator owns the private key and decision.
 An agent receives only a content-only tool. This version supports one create-only

@@ -16,6 +16,10 @@ From OUTSIDE the checkout, using absolute paths and new output destinations:
 The runner checks an explicit source/test/example inventory and installed imports.
 Version 0.2.0 expected counts: core29, Harness93 (includes core). The published
 0.1.1 inventory remains core28/Harness72; do not relabel historical results.
+The **unreleased approved-execution checkout** inventory is core33/Harness112.
+It adds four operator presentation/CLI checks, seven retained-execution facade
+checks, three spawned-process facade checks and five ordinary approval parity checks.
+These are candidate checks, not results for the published 0.2.0 wheel.
 No skipped/expected-failure
 test is accepted. Counts are bookkeeping, not a security score.
 
@@ -40,3 +44,8 @@ For an audit retain commit, wheel SHA-256, locks, commands, result JSON and limi
 Do not publish private keys, decisions, real documents, runtime state or raw
 operator transcripts. Public CI artifacts contain synthetic test summaries and
 bounded fixture diagnostics only.
+
+The Harness lanes also run the [finite route measurement](approved-execution.md#compare-honestly)
+against the same installed wheel. Its numeric timing output has no pass threshold;
+exact bytes, unchanged protected content, no replay and verified readback do.
+No human usability or model latency is inferred from it.

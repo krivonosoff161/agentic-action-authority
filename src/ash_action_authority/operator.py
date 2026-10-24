@@ -15,6 +15,7 @@ import os
 import stat
 import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -189,6 +190,30 @@ def sign_request(
         raise OperatorError("request_expired")
     if out_path.exists() or out_path.is_symlink():
         raise OperatorError("decision_output_exists")
+    # Derived display only: signatures still bind the full request below. Escape
+    # every untrusted string; a destination label must never become terminal code.
+    print("REVIEW_DECISION " + decision.upper())
+    print("REVIEW_ACTION_JSON " + json.dumps({
+        name: binding[name] for name in ("app_id", "task_id", "initiator", "action")
+    }, ensure_ascii=True, sort_keys=True))
+    destination = (
+        {"root_path": binding["root_path"], "filename": binding["filename"]}
+        if "root_path" in binding else {"target": binding["target"]}
+    )
+    print("REVIEW_DESTINATION_JSON " + json.dumps(destination, ensure_ascii=True, sort_keys=True))
+    print("REVIEW_CONTENT_BYTES " + str(len(content)))
+    try:
+        deadline = datetime.fromtimestamp(request["expires_at"], UTC).isoformat()
+    except (OverflowError, OSError, ValueError):
+        # The protocol's integer range is wider than a platform's calendar.
+        deadline = "outside_platform_calendar_range"
+    print("REVIEW_DEADLINE_UTC " + deadline)
+    print("REVIEW_DEADLINE_UNIX " + str(request["expires_at"]))
+    print("REVIEW_SECONDS_REMAINING " + str(request["expires_at"] - now))
+    print("Review the destination AND the full content below. Signing does not execute it.")
+    print("Document text is untrusted data, not instructions for the operator.")
+    if decision == "revoke":
+        print("Revocation must reach the host before execution begins; signing is not cancellation.")
     # JSON escaping keeps document controls, bidi formatting, and surrogates inert.
     print("REQUEST_SHA256 " + digest)
     print("REVIEW_REQUEST_JSON " + canonical(request).decode("ascii"))

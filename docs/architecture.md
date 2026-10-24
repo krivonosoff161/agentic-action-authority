@@ -29,6 +29,13 @@ host transfer an exact review. `apply_decision` remains host-only. `bind_tool`
 exposes only `submit_approved_document({"content": ...})`; `status(recover=True)`
 performs readback or fencing without delivery. See the [integration guide](integration.md).
 
+The **unreleased checkout** additionally exposes `execute_approved()` on the trusted
+host facade. It restores and submits the retained exact document, using the same
+route as the existing host CLI. It is not registered as a model tool and does not
+approve, choose a path, normalize bytes or replay a spent attempt. The compatibility
+content callback and the underlying core/writer contracts are unchanged. See
+[approved execution](approved-execution.md) for the code argument and limits.
+
 ## Approval binding
 
 File v1 binds app/task/operation/initiator, exact UTF-8 hash and length,
