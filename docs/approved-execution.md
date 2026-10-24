@@ -1,9 +1,10 @@
 # Execute the document the operator actually reviewed
 
-**Unreleased source change.** `DocumentHost.execute_approved()` is not in the
-published 0.2.0 wheel. Build and verify this checkout using the README's source
-installation procedure. Do not install 0.2.0 from the index and expect this method.
-No new release or publication is implied by this page.
+This is the **0.3.0 host API**. Confirm [0.3.0 package availability](https://pypi.org/project/agentic-action-authority/0.3.0/)
+and [release evidence](https://github.com/krivonosoff161/agentic-action-authority/releases/tag/v0.3.0)
+before using an index wheel. The published 0.2.0 wheel has the older content
+callback but does not have `DocumentHost.execute_approved()`. This page defines
+version scope; it is not evidence of an index upload.
 
 ## The smaller host path
 
@@ -69,7 +70,7 @@ replay. See [verification](verification.md) for exact installed artifact checks.
 
 ## Compare honestly
 
-From outside the checkout, after installing and verifying this exact source wheel:
+From outside the checkout, after installing and verifying the exact 0.3.0 wheel:
 
 ```text
 <harness-python> <checkout>/tools/measure_document_routes.py --out new-route-results --samples 16

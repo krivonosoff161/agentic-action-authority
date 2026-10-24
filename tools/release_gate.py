@@ -15,7 +15,7 @@ from email.parser import Parser
 from pathlib import Path
 
 REPOSITORY = "krivonosoff161/agentic-action-authority"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 TAG = "v" + VERSION
 WHEEL = "agentic_action_authority-" + VERSION + "-py3-none-any.whl"
 LIMIT = 10_000_000
@@ -71,7 +71,7 @@ def validate_environment(environment, policies):
     require(reviewers == [("User", "krivonosoff161")], "release_owner_reviewer_required")
     require(sorted((item.get("type", ""), item.get("name", ""))
                    for item in policies.get("branch_policies", []))
-            == [("tag", "v0.1.0"), ("tag", "v0.1.1"), ("tag", TAG)],
+            == [("tag", "v0.1.0"), ("tag", "v0.1.1"), ("tag", "v0.2.0"), ("tag", TAG)],
             "release_exact_tag_required")
 
 
@@ -210,6 +210,7 @@ class GateTests(unittest.TestCase):
         ]}]}
         policies = {"branch_policies": [{"type": "tag", "name": "v0.1.0"},
                                        {"type": "tag", "name": "v0.1.1"},
+                                       {"type": "tag", "name": "v0.2.0"},
                                        {"type": "tag", "name": TAG}]}
         validate_environment(environment, policies)
         for altered in ({**environment, "protection_rules": []},
@@ -220,7 +221,7 @@ class GateTests(unittest.TestCase):
                         {"branch_policies": [{"type": "tag", "name": "*"}]},
                         {"branch_policies": policies["branch_policies"][:-1]},
                         {"branch_policies": policies["branch_policies"] + [
-                            {"type": "tag", "name": "v0.3.0"}]},
+                            {"type": "tag", "name": "v0.4.0"}]},
                         {"branch_policies": policies["branch_policies"] + [
                             {"type": "branch", "name": TAG}]}):
             with self.assertRaises(ValueError):

@@ -1,8 +1,8 @@
 # Bounded external developer exercise
 
 This is a **proposed exercise**, not a completed pilot or independent human
-acceptance. Use a precisely identified 0.2.0 wheel after verifying its
-availability; 0.1.1 lacks `DocumentHost`. Give participants that wheel, the
+acceptance. Use a precisely identified 0.3.0 wheel after verifying its
+availability and release evidence; 0.2.0 lacks `execute_approved()`. Give participants that wheel, the
 [integration guide](integration.md), disposable public source and document
 fixtures, and a separate operator role with synthetic keys. Do not use real
 keys, private documents, provider credentials, or production destinations.
@@ -22,7 +22,7 @@ Compare three approaches under the same trust and filesystem assumptions:
 |---|---|---|
 | Existing native approval | Their framework's human approval mechanism plus a trusted host callback | How it binds the exact document and destination, stores/rechecks decisions, prevents repeated effects, and recovers after interruption. |
 | Git review | A normal protected PR/review flow where the document is a reviewed repository change | Whether stale approval is dismissed after a changed diff and whether the actual target action is fully covered by that repository workflow. |
-| Action Authority 0.2.0 | Installed `DocumentHost`, separate operator CLI, optional Harness writer | Whether the integration reduces host work for exact binding, one attempt, and recovery without introducing confusing or unsafe steps. |
+| Action Authority 0.3.0 | Installed `DocumentHost.execute_approved()`, separate operator CLI, optional Harness writer | Whether host-only retained execution reduces integration work while preserving exact binding, one attempt, and conservative recovery. The content callback remains a compatibility option. |
 
 Do not assume the baselines are weak. A sound native callback can implement the
 same checks; a repository document may already be sufficiently governed by Git
@@ -34,7 +34,9 @@ record that result. No comparative superiority has been measured here.
 Give the same written task and fixtures to each participant without private
 coaching. Ask them to choose the appropriate install route, obtain a separately
 verified fingerprint, declare the host repository/revision, prepare a request,
-complete independent operator review, submit exact content and inspect readback.
+complete independent operator review, execute from trusted retained host state
+and inspect readback. If they choose the compatibility callback, record the extra
+caller-side read, UTF-8 decode and exact-content submission.
 Then present changed bytes, a repeat, expiry and an interrupted attempt. Ask
 them to explain when to create a new task and when to stop on `UNKNOWN`.
 

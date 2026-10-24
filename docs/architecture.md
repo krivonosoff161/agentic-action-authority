@@ -8,7 +8,8 @@ trusted host -> ActionCore -> cryptographic protocol + local approval state
                    v trusted effect interface
               ActionGate's Harness adapter -> installed Harness writer
 operator device -> signed decision -> host verification
-agent -> content-only submit callback
+agent -> optional content-only submit callback (0.2.0 compatibility route)
+trusted host -> execute_approved() (0.3.0 retained-document route)
 ```
 
 The base distribution imports ActionCore, AuthorityError and protocol helpers
@@ -16,7 +17,7 @@ without Harness. Importing ActionGate loads the optional file adapter. The opera
 CLI is never an agent tool. The host CLI is the file adapter's reference host,
 not an unrestricted execution server.
 
-Version 0.2.0 adds public `DocumentHost` as an installed facade over this
+Version 0.2.0 added public `DocumentHost` as a facade over this
 existing host state and writer; 0.1.1 did not contain it. `prepare` validates
 an independently supplied expected
 public-key fingerprint before task creation, then binds a host-declared
@@ -29,8 +30,8 @@ host transfer an exact review. `apply_decision` remains host-only. `bind_tool`
 exposes only `submit_approved_document({"content": ...})`; `status(recover=True)`
 performs readback or fencing without delivery. See the [integration guide](integration.md).
 
-The **unreleased checkout** additionally exposes `execute_approved()` on the trusted
-host facade. It restores and submits the retained exact document, using the same
+Version 0.3.0 adds `execute_approved()` on the trusted host facade. It restores
+and submits the retained exact document, using the same
 route as the existing host CLI. It is not registered as a model tool and does not
 approve, choose a path, normalize bytes or replay a spent attempt. The compatibility
 content callback and the underlying core/writer contracts are unchanged. See
@@ -56,7 +57,8 @@ and invalidates required context before using changed inputs.
 app_id=..., task_id=..., initiator=..., expires_at=...)` creates NEW state.
 Open requires the same binding. The host retains configuration.
 Request, apply_decision and invalidate belong on the host/operator side.
-Only submit(content) belongs on the agent side.
+Only the optional content-only `submit(content)` callback belongs on the agent
+side. `execute_approved()` belongs exclusively to the trusted host.
 
 SQLite serialization orders approval, revocation and one execution attempt.
 PENDING_APPROVAL -> APPROVED -> EXECUTING spends admission at the durable BEGIN.

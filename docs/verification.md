@@ -14,14 +14,14 @@ From OUTSIDE the checkout, using absolute paths and new output destinations:
 ```
 
 The runner checks an explicit source/test/example inventory and installed imports.
-Version 0.2.0 expected counts: core29, Harness93 (includes core). The published
-0.1.1 inventory remains core28/Harness72; do not relabel historical results.
-The **unreleased approved-execution checkout** inventory is core33/Harness112.
-It adds four operator presentation/CLI checks, seven retained-execution facade
+Version 0.3.0 expected counts: core33, Harness112 (includes core). The published
+0.2.0 inventory remains core29/Harness93; 0.1.1 remains core28/Harness72.
+Do not relabel historical results.
+The 0.3.0 inventory adds four operator presentation/CLI checks, seven retained-execution facade
 checks, three spawned-process facade checks and five ordinary approval parity checks.
-These are candidate checks, not results for the published 0.2.0 wheel.
-No skipped/expected-failure
-test is accepted. Counts are bookkeeping, not a security score.
+These counts describe the 0.3.0 suite, not an actual result or an update to the
+published 0.2.0 wheel. No skipped/expected-failure test is accepted. Counts are
+bookkeeping, not a security score.
 
 The wheel checker compares source, wheel RECORD and installed bytes. CI builds
 one wheel and installs those bytes on Windows/Linux in both lanes. Results bind
@@ -39,6 +39,10 @@ Version 0.2.0 onboarding cases additionally check independent expected-fingerpri
 matching before task creation, explicit host repository/revision declarations,
 installed `DocumentHost` public-API composition and content-only routing. Declared
 provenance is not remotely attested. Source tests do not replace installed checks.
+Version 0.3.0 adds host-only retained execution, operator presentation, spawned
+process interruption and an ordinary test-only approval reference. That reference
+assumes an authenticated local operator callback and has same-process recovery
+checks only; it is not independent human review or a reusable product API.
 
 For an audit retain commit, wheel SHA-256, locks, commands, result JSON and limits.
 Do not publish private keys, decisions, real documents, runtime state or raw

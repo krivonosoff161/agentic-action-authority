@@ -3,7 +3,7 @@
 Version 0.2.0 adds public `DocumentHost` over the existing ActionCore and
 Harness 1.14.2 create-only writer. The 0.1.1 wheel does not contain this facade.
 Confirm availability and exact installed version before following the
-[0.2.0 integration guide](integration.md). This is an API and onboarding change,
+[0.2.0 integration guide](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.2.0/docs/integration.md). This is an API and onboarding change,
 not a new effect backend or a claim of generic agent containment.
 
 ## New task setup
