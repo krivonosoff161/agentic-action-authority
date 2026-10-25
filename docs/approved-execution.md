@@ -1,7 +1,8 @@
 # Execute the document the operator actually reviewed
 
-This is the **0.3.0 host API**. Confirm [0.3.0 package availability](https://pypi.org/project/agentic-action-authority/0.3.0/)
-and [release evidence](https://github.com/krivonosoff161/agentic-action-authority/releases/tag/v0.3.0)
+This host API was introduced in 0.3.0 and remains available in 0.4.0. Confirm
+[0.4.0 package availability](https://pypi.org/project/agentic-action-authority/0.4.0/)
+and [release evidence](https://github.com/krivonosoff161/agentic-action-authority/releases/tag/v0.4.0)
 before using an index wheel. The published 0.2.0 wheel has the older content
 callback but does not have `DocumentHost.execute_approved()`. This page defines
 version scope; it is not evidence of an index upload.
@@ -70,7 +71,7 @@ replay. See [verification](verification.md) for exact installed artifact checks.
 
 ## Compare honestly
 
-From outside the checkout, after installing and verifying the exact 0.3.0 wheel:
+From outside the checkout, after installing and verifying the exact 0.4.0 wheel:
 
 ```text
 <harness-python> <checkout>/tools/measure_document_routes.py --out new-route-results --samples 16

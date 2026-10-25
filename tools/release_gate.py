@@ -15,7 +15,7 @@ from email.parser import Parser
 from pathlib import Path
 
 REPOSITORY = "krivonosoff161/agentic-action-authority"
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 TAG = "v" + VERSION
 WHEEL = "agentic_action_authority-" + VERSION + "-py3-none-any.whl"
 LIMIT = 10_000_000
@@ -71,7 +71,8 @@ def validate_environment(environment, policies):
     require(reviewers == [("User", "krivonosoff161")], "release_owner_reviewer_required")
     require(sorted((item.get("type", ""), item.get("name", ""))
                    for item in policies.get("branch_policies", []))
-            == [("tag", "v0.1.0"), ("tag", "v0.1.1"), ("tag", "v0.2.0"), ("tag", TAG)],
+            == [("tag", "v0.1.0"), ("tag", "v0.1.1"), ("tag", "v0.2.0"),
+                ("tag", "v0.3.0"), ("tag", TAG)],
             "release_exact_tag_required")
 
 
@@ -99,7 +100,7 @@ def validate_stage(receipt, *, sha, build_run, digest):
         "mode": "publish",
         "target": "testpypi", "tag": TAG, "sha": sha,
         "build_run": build_run, "wheel_sha256": digest,
-        "installed_platform_checks": "core-and-harness-windows-and-linux",
+        "installed_platform_checks": "core-harness-and-agent-framework-windows-and-linux",
     }, "staging_subject_mismatch")
 
 
@@ -194,10 +195,11 @@ class GateTests(unittest.TestCase):
     def test_staging_is_exact_subject(self):
         receipt = {"schema": "action-authority-publication-v1", "mode": "publish", "target": "testpypi",
                    "tag": TAG, "sha": "a" * 40, "build_run": "1", "wheel_sha256": "b" * 64,
-                   "installed_platform_checks": "core-and-harness-windows-and-linux"}
+                   "installed_platform_checks": "core-harness-and-agent-framework-windows-and-linux"}
         validate_stage(receipt, sha="a" * 40, build_run="1", digest="b" * 64)
         for key, value in (("target", "pypi"), ("build_run", "2"), ("wheel_sha256", "c" * 64),
-                           ("mode", "verify"), ("schema", "action-authority-index-verification-v1")):
+                           ("mode", "verify"), ("schema", "action-authority-index-verification-v1"),
+                           ("installed_platform_checks", "core-and-harness-windows-and-linux")):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 validate_stage({**receipt, key: value}, sha="a" * 40,
                                build_run="1", digest="b" * 64)
@@ -211,6 +213,7 @@ class GateTests(unittest.TestCase):
         policies = {"branch_policies": [{"type": "tag", "name": "v0.1.0"},
                                        {"type": "tag", "name": "v0.1.1"},
                                        {"type": "tag", "name": "v0.2.0"},
+                                       {"type": "tag", "name": "v0.3.0"},
                                        {"type": "tag", "name": TAG}]}
         validate_environment(environment, policies)
         for altered in ({**environment, "protection_rules": []},
@@ -221,7 +224,7 @@ class GateTests(unittest.TestCase):
                         {"branch_policies": [{"type": "tag", "name": "*"}]},
                         {"branch_policies": policies["branch_policies"][:-1]},
                         {"branch_policies": policies["branch_policies"] + [
-                            {"type": "tag", "name": "v0.4.0"}]},
+                            {"type": "tag", "name": "v0.5.0"}]},
                         {"branch_policies": policies["branch_policies"] + [
                             {"type": "branch", "name": TAG}]}):
             with self.assertRaises(ValueError):
@@ -268,7 +271,7 @@ def main():
         record = {"schema": schema, "mode": args.publication_mode, "target": args.target,
                   "tag": TAG, "sha": args.sha, "build_run": args.build_run,
                   "wheel_sha256": digest,
-                  "installed_platform_checks": "core-and-harness-windows-and-linux"}
+                  "installed_platform_checks": "core-harness-and-agent-framework-windows-and-linux"}
         with args.out.open("x", encoding="ascii") as stream:
             json.dump(record, stream, sort_keys=True, indent=2)
     print(json.dumps({"success": True, "mode": args.mode, "wheel_sha256": digest}))

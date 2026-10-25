@@ -1,10 +1,11 @@
 # Agent Framework: one declaration, one reviewed document
 
-Status: **unreleased integration proposal**, not included in the published 0.3.0
-wheel. This optional adapter targets `agent-framework-core==1.23.0`. It does not
-patch Microsoft's SDK or add a general-purpose tool executor. Install a wheel
-built from this PR with its `agent-framework` extra; do not expect the integration
-from `pip install agentic-action-authority==0.3.0`.
+The optional 0.4.0 adapter targets `agent-framework-core==1.23.0` and the
+Harness 1.14.2 writer. It does not patch Microsoft's SDK or add a
+general-purpose tool executor. It is absent from the 0.3.0 wheel. Check the
+[0.4.0 index entry](https://pypi.org/project/agentic-action-authority/0.4.0/)
+and [release evidence](https://github.com/krivonosoff161/agentic-action-authority/releases/tag/v0.4.0)
+before relying on an index installation.
 
 The useful boundary is small: the agent proposes a UTF-8 public document, the
 application presents the exact retained action to an operator, and the existing
@@ -114,19 +115,26 @@ and local recovery limits from [architecture](architecture.md) still apply.
 
 ## Reproduce without a model or credentials
 
-Use Python 3.11 and a fresh virtual environment in a checkout of this PR.
-With that environment activated, build and install the candidate wheel:
+Use Python 3.11 and a fresh virtual environment. After confirming the index
+and release evidence, install the optional extra:
+
+```console
+python -m pip install "agentic-action-authority[agent-framework]==0.4.0"
+python -m pip check
+```
+
+To reproduce from an exact checkout, activate a fresh environment, then build
+and install that checkout's wheel:
 
 ```console
 python -m pip --isolated install --index-url https://pypi.org/simple --require-hashes -r requirements/build.txt
 python -m build --no-isolation --wheel --outdir dist
-python -m pip --isolated install "./dist/agentic_action_authority-0.3.0-py3-none-any.whl[agent-framework]"
+python -m pip --isolated install "./dist/agentic_action_authority-0.4.0-py3-none-any.whl[agent-framework]"
 python examples/agent_framework_document.py
 ```
 
-This locally built candidate still carries the base version; do not upload it or
-confuse it with the published 0.3.0 wheel. CI additionally installs the platform
-dependency locks and `requirements/agent-framework.txt` with hash verification.
+CI additionally installs the platform dependency locks and
+`requirements/agent-framework.txt` with hash verification.
 The example uses the real native Agent/Workflow/function-invocation layer and a
 scripted in-memory chat client. Its fixed test signer is explicitly **synthetic**;
 it is not an operator-review implementation and must not be used in production.

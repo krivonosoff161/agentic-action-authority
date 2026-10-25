@@ -1,7 +1,7 @@
 # Bounded external developer exercise
 
 This is a **proposed exercise**, not a completed pilot or independent human
-acceptance. Use a precisely identified 0.3.0 wheel after verifying its
+acceptance. Use a precisely identified 0.4.0 wheel after verifying its
 availability and release evidence; 0.2.0 lacks `execute_approved()`. Give participants that wheel, the
 [integration guide](integration.md), disposable public source and document
 fixtures, and a separate operator role with synthetic keys. Do not use real
@@ -22,7 +22,7 @@ Compare three approaches under the same trust and filesystem assumptions:
 |---|---|---|
 | Existing native approval | Their framework's human approval mechanism plus a trusted host callback | How it binds the exact document and destination, stores/rechecks decisions, prevents repeated effects, and recovers after interruption. |
 | Git review | A normal protected PR/review flow where the document is a reviewed repository change | Whether stale approval is dismissed after a changed diff and whether the actual target action is fully covered by that repository workflow. |
-| Action Authority 0.3.0 | Installed `DocumentHost.execute_approved()`, separate operator CLI, optional Harness writer | Whether host-only retained execution reduces integration work while preserving exact binding, one attempt, and conservative recovery. The content callback remains a compatibility option. |
+| Action Authority 0.4.0 | Installed `DocumentHost.execute_approved()`, separate operator CLI, optional Harness writer | Whether host-only retained execution reduces integration work while preserving exact binding, one attempt, and conservative recovery. The content callback remains a compatibility option. |
 
 Do not assume the baselines are weak. A sound native callback can implement the
 same checks; a repository document may already be sufficiently governed by Git

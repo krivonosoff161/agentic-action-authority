@@ -23,5 +23,5 @@ preventing a circular installation dependency.
 Previous candidate test and owner-acceptance results describe their original
 revision. They are provenance, not proof that this extracted version passed.
 Each release needs its own source/wheel hashes and installed checks; see the
-[0.3.0 release record](releases/v0.3.0.md) for the current exact subject and gates.
+[0.4.0 release record](releases/v0.4.0.md) for the current exact subject and gates.
 Real owner approvals, signing keys, documents and private research are excluded.
