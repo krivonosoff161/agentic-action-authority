@@ -1,7 +1,8 @@
 # One document, one approval, one attempt
 
-This guide uses the **0.3.0 onboarding API**. Confirm the exact 0.3.0 package
-is available and install it using the [README route](../README.md#start-with-one-document).
+This guide uses the host-only execution route introduced in 0.3.0. Confirm the exact
+0.4.0 package is available and install it using the
+[README route](../README.md#start-with-one-document).
 Version 0.1.1 does not have `DocumentHost` or the required fingerprint and
 host-repository setup flags. Existing 0.1.1 tasks are not automatically migrated;
 see the [0.1.1 to 0.2.0 upgrade notes](upgrading-0.2.md). The 0.2.0 wheel
@@ -76,7 +77,7 @@ Status without --recover is historical, not current readback. CLI exit 0 means
 command success, 1 refusal, 2 uncertainty/busy coordination. A failed command does
 not establish that no effect happened.
 
-For an embedded Python host, the equivalent 0.3.0 route is:
+For an embedded Python host, the equivalent route is:
 
 ```python
 from pathlib import Path

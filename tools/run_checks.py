@@ -32,6 +32,7 @@ EXPECTED_MODULES = frozenset(
 EXPECTED_SOURCE_FILES = frozenset(
     {
         "__init__.py",
+        "agent_framework.py",
         "core.py",
         "dispatch.py",
         "document.py",
@@ -41,10 +42,11 @@ EXPECTED_SOURCE_FILES = frozenset(
         "protocol.py",
     }
 )
-EXPECTED_EXAMPLE_FILES = frozenset({"content_only_dispatch.py"})
+EXPECTED_EXAMPLE_FILES = frozenset({"content_only_dispatch.py", "agent_framework_document.py"})
+FRAMEWORK_MODULES = frozenset({"test_agent_framework"})
 CORE_MODULES = frozenset({"test_core", "test_protocol", "test_operator"})
 # Updated only after reviewing the explicit test inventory.
-EXPECTED_TESTS = {"core": 33, "harness": 112}
+EXPECTED_TESTS = {"core": 33, "harness": 112, "agent-framework": 14}
 sys.dont_write_bytecode = True
 
 
@@ -83,7 +85,7 @@ def main() -> int:
         help="repository root, used only for byte inventory and tests",
     )
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--suite", choices=("core", "harness"), required=True)
+    parser.add_argument("--suite", choices=("core", "harness", "agent-framework"), required=True)
     args = parser.parse_args()
     # Refuse an existing destination before running any fixture effects.
     args.out.mkdir(exist_ok=False)
@@ -99,20 +101,28 @@ def main() -> int:
         harness_version = importlib.metadata.version("agentic-security-harness")
     except importlib.metadata.PackageNotFoundError:
         harness_version = None
-    if args.suite == "harness":
+    if args.suite != "core":
         imported["harness"] = _installed_module("agentic_security_harness")
         if harness_version != "1.14.2":
             raise RuntimeError("wrong_installed_harness_version")
     elif harness_version is not None:
         raise RuntimeError("core_lane_must_not_have_harness_installed")
+    framework_version = None
+    if args.suite == "agent-framework":
+        imported["agent_framework"] = _installed_module("agent_framework")
+        framework_version = importlib.metadata.version("agent-framework-core")
+        if framework_version != "1.23.0":
+            raise RuntimeError("wrong_installed_agent_framework_version")
     candidate_version = importlib.metadata.version("agentic-action-authority")
     expected_modules = CORE_MODULES if args.suite == "core" else EXPECTED_MODULES
+    if args.suite == "agent-framework":
+        expected_modules = FRAMEWORK_MODULES
     expected_tests = EXPECTED_TESTS[args.suite]
     files = sorted((source / "src" / "ash_action_authority").glob("*.py"))
     tests = sorted((source / "tests").glob("test_*.py"))
     examples = sorted((source / "examples").glob("*.py"))
     if (
-        {path.stem for path in tests} != EXPECTED_MODULES
+        {path.stem for path in tests} != EXPECTED_MODULES | FRAMEWORK_MODULES
         or {path.name for path in files} != EXPECTED_SOURCE_FILES
         or {path.name for path in examples} != EXPECTED_EXAMPLE_FILES
     ):
@@ -145,6 +155,7 @@ def main() -> int:
         "installed_acceptance": True,
         "candidate_version": candidate_version,
         "harness_version": harness_version,
+        "agent_framework_version": framework_version,
         "imports": imported,
         "tests_expected": expected_tests,
         "tests_run": result.testsRun,

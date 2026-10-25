@@ -1,12 +1,13 @@
 # Embed one reviewed document in a trusted host
 
-This is the **0.3.0 `DocumentHost` API**. Confirm the exact 0.3.0 package is
-available and install it using the [README](../README.md#start-with-one-document).
+The `DocumentHost.execute_approved()` API was introduced in 0.3.0. Confirm the
+exact 0.4.0 package is available and install it using the
+[README](../README.md#start-with-one-document).
 The required `--expected-key-fingerprint` / `--host-repository` setup flags
 and `DocumentHost` are absent from the 0.1.1 wheel. Existing 0.1.1 task state
 is not automatically migrated; see the [upgrade notes](upgrading-0.2.md).
 The published 0.2.0 wheel has the content callback but not the 0.3.0
-`execute_approved()` method. Check [0.3.0 release evidence](releases/v0.3.0.md)
+`execute_approved()` method. Check [0.4.0 release evidence](releases/v0.4.0.md)
 before using the new method from an index installation.
 
 The host owns task state, public source admission, operator enrollment, review

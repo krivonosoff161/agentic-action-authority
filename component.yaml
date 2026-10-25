@@ -8,8 +8,8 @@
   "summary": "Separately owned exact-action approval core with an optional Harness create-only file adapter; no automatic extension loading.",
   "package": {
     "name": "agentic-action-authority",
-    "version": "0.3.0",
-    "install": "Follow the versioned 0.3.0 installation in README.md; consult docs/releases/v0.3.0.md for verified index publication.",
+    "version": "0.4.0",
+    "install": "Follow the versioned 0.4.0 installation in README.md; check the index entry and release evidence before treating publication as complete. See docs/releases/v0.4.0.md for scope.",
     "entry_points": [
       "action-authority-operator",
       "action-authority-host"
@@ -26,7 +26,8 @@
     ],
     "collectors": [],
     "adapters": [
-      "harness-create-only-file"
+      "harness-create-only-file",
+      "agent-framework-declaration-only-document"
     ],
     "contracts": [
       "action-authority-file-v1",
@@ -36,7 +37,8 @@
   "consumes": [
     "operator-enrolled public key and detached signed decisions",
     "host-owned exact payload and declared dependency digests",
-    "optional agentic-security-harness==1.14.2 file writer"
+    "optional agentic-security-harness==1.14.2 file writer",
+    "optional agent-framework-core==1.23.0 declaration-only route"
   ],
   "contracts": [
     {
@@ -80,6 +82,14 @@
       "role": "component-owned"
     },
     {
+      "path": "docs/agent-framework.md",
+      "role": "component-owned"
+    },
+    {
+      "path": "docs/releases/v0.4.0.md",
+      "role": "release-scope"
+    },
+    {
       "path": "SECURITY.md",
       "role": "component-owned"
     }
@@ -103,6 +113,7 @@
     "tests/test_core.py",
     "tests/test_native_parity.py",
     "tests/test_process.py",
+    "tests/test_agent_framework.py",
     "tools/check_installed_wheel.py",
     ".github/workflows/checks.yml"
   ],
