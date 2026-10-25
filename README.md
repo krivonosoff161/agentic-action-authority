@@ -117,6 +117,14 @@ For `DocumentHost` integration, use the
 The `content_only_dispatch.py` example is the lower-level `ActionGate`
 compatibility route; `DocumentHost` is the shorter public host composition.
 
+## Proposed Agent Framework integration (not in the 0.3.0 release)
+
+The optional [declaration-only document adapter](docs/agent-framework.md) connects
+one native pending tool call to the existing signed, retained-document action.
+It includes an offline Agent/Workflow example and a separate installed SDK test
+lane. This is an integration proposal in this checkout, not Microsoft acceptance,
+an arbitrary-tool executor, or a feature of the published 0.3.0 wheel.
+
 ## Verification and provenance
 
 The [verification guide](https://github.com/krivonosoff161/agentic-action-authority/blob/v0.3.0/docs/verification.md) separates base-only installation,

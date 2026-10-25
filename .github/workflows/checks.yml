@@ -62,7 +62,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        suite: [core, harness]
+        suite: [core, harness, agent-framework]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -99,6 +99,10 @@ jobs:
           $lock = Join-Path $env:AUTHORITY_CHECKOUT "requirements/$prefix$platformLock.txt"
           & $exe -m pip --isolated install --index-url https://pypi.org/simple --only-binary=:all: --no-compile --require-hashes -r $lock
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($env:AUTHORITY_SUITE -eq 'agent-framework') {
+            & $exe -m pip --isolated install --index-url https://pypi.org/simple --only-binary=:all: --no-compile --require-hashes -r $lock -r (Join-Path $env:AUTHORITY_CHECKOUT 'requirements/agent-framework.txt')
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
           & $exe -m pip --isolated install --no-index --no-deps --no-compile $wheels[0].FullName
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & $exe -m pip check
@@ -106,13 +110,17 @@ jobs:
           $results = Join-Path $env:RUNNER_TEMP 'authority-results'
           New-Item -ItemType Directory -Path $results -ErrorAction Stop | Out-Null
           $extra = @()
-          if ($env:AUTHORITY_SUITE -eq 'harness') { $extra += '--with-harness' }
+          if ($env:AUTHORITY_SUITE -ne 'core') { $extra += '--with-harness' }
           & $exe (Join-Path $env:AUTHORITY_CHECKOUT 'tools/check_installed_wheel.py') --wheel $wheels[0].FullName --source $env:AUTHORITY_CHECKOUT --out (Join-Path $results 'wheel.json') @extra
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & $exe (Join-Path $env:AUTHORITY_CHECKOUT 'tools/run_checks.py') --source $env:AUTHORITY_CHECKOUT --suite $env:AUTHORITY_SUITE --out (Join-Path $results 'unittest')
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ($env:AUTHORITY_SUITE -eq 'harness') {
             & $exe (Join-Path $env:AUTHORITY_CHECKOUT 'tools/measure_document_routes.py') --out (Join-Path $results 'route-measurement') --samples 8
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          if ($env:AUTHORITY_SUITE -eq 'agent-framework') {
+            & $exe (Join-Path $env:AUTHORITY_CHECKOUT 'examples/agent_framework_document.py')
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
       - name: Retain synthetic results, including failures
